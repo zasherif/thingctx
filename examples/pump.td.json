@@ -1,0 +1,145 @@
+{
+  "@context": [
+    "https://www.w3.org/2022/wot/td/v1.1",
+    {
+      "tc": "https://thingctx.dev/vocab#",
+      "saref": "https://saref.etsi.org/core/",
+      "om": "http://www.ontology-of-units-of-measure.org/resource/om-2/"
+    }
+  ],
+  "id": "urn:demo:pump:v1",
+  "title": "Pump",
+  "@type": ["saref:Actuator", "saref:Sensor"],
+  "description": "A demo pump. In production the device publishes this Thing Description; the demos load it. This TD exercises the FULL WoT TD 1.1 surface: base (relative href resolution), thing-level uriVariables, actions (input + output schema, idempotent, a uriVariable in the form), readable/writable/observable typed properties, a typed event, four transports (local/http/mqtt/sse), and three declared security schemes (bearer active; basic + apikey declared).",
+  "base": "{BASE_URL}/",
+  "uriVariables": {
+    "id": { "type": "string", "description": "A sensor id (Thing-level uriVariable)." }
+  },
+  "securityDefinitions": {
+    "bearer_sc": { "scheme": "bearer" },
+    "basic_sc": { "scheme": "basic" },
+    "apikey_sc": { "scheme": "apikey", "in": "header", "name": "X-API-Key" }
+  },
+  "security": ["bearer_sc"],
+  "actions": {
+    "diagnose": {
+      "@type": "tc:PromptTemplate",
+      "description": "A prompt template to diagnose the pump (the WoT-native equivalent of an MCP prompt, via the tc: extension vocabulary). The template lives in the TD, so it expands client-side , no device call.",
+      "input": {
+        "type": "object",
+        "properties": {
+          "severity": { "type": "string", "description": "low | high" }
+        },
+        "required": ["severity"]
+      },
+      "output": { "type": "array" },
+      "tc:template": "Severity {severity}: read the pump status, list any sensor reading over its limit, and say whether the pump is healthy.",
+      "forms": [{ "href": "local://diagnose" }]
+    },
+    "set_speed": {
+      "@type": "saref:ActuatingFunction",
+      "description": "Set the pump speed (rpm).",
+      "input": {
+        "type": "object",
+        "properties": { "rpm": { "type": "integer" } },
+        "required": ["rpm"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "rpm": { "type": "integer" }
+        }
+      },
+      "forms": [{ "href": "local://set_speed" }]
+    },
+    "status": {
+      "description": "Read the pump status.",
+      "input": { "type": "object", "properties": {} },
+      "idempotent": true,
+      "output": {
+        "type": "object",
+        "properties": {
+          "rpm": { "type": "integer" },
+          "temp": { "type": "number" },
+          "healthy": { "type": "boolean" }
+        }
+      },
+      "forms": [{ "href": "status" }]
+    },
+    "read_sensor": {
+      "description": "Read one named sensor by id (id goes in the URL path).",
+      "input": {
+        "type": "object",
+        "properties": { "id": { "type": "string" } },
+        "required": ["id"]
+      },
+      "idempotent": true,
+      "forms": [{ "href": "sensors/{id}" }]
+    },
+    "estop": {
+      "description": "Emergency stop. Args: reason (string).",
+      "input": {
+        "type": "object",
+        "properties": { "reason": { "type": "string" } }
+      },
+      "forms": [{ "href": "local://estop" }]
+    },
+    "set_coolant": {
+      "description": "Open or close the coolant valve (over the plant MQTT bus).",
+      "input": {
+        "type": "object",
+        "properties": { "open": { "type": "boolean" } },
+        "required": ["open"]
+      },
+      "forms": [{ "href": "mqtt://{MQTT_BROKER}/pump/set_coolant" }]
+    }
+  },
+  "properties": {
+    "rpm": {
+      "@type": "saref:Measurement",
+      "type": "integer",
+      "description": "Current rpm (read-only gauge).",
+      "readOnly": true,
+      "observable": true,
+      "forms": [
+        { "href": "local://rpm", "op": ["readproperty", "observeproperty"] }
+      ]
+    },
+    "target_rpm": {
+      "type": "integer",
+      "description": "Desired rpm setpoint (read AND write).",
+      "forms": [
+        { "href": "local://target_rpm", "op": ["readproperty", "writeproperty"] }
+      ]
+    },
+    "camera": {
+      "type": "string",
+      "description": "Latest camera frame (a PNG; the warning light is red when over the limit).",
+      "readOnly": true,
+      "contentMediaType": "image/png",
+      "forms": [
+        { "href": "local://camera", "op": ["readproperty"], "contentType": "image/png" }
+      ]
+    }
+  },
+  "events": {
+    "overheat": {
+      "description": "Temperature exceeded the limit.",
+      "data": {
+        "type": "object",
+        "properties": {
+          "temp": { "type": "number" },
+          "limit": { "type": "number" }
+        }
+      },
+      "forms": [
+        {
+          "href": "events/overheat",
+          "op": "subscribeevent",
+          "subprotocol": "sse"
+        }
+      ]
+    }
+  }
+}

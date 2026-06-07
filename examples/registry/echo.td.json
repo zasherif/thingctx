@@ -1,0 +1,22 @@
+{
+  "@context": "https://www.w3.org/2022/wot/td/v1.1",
+  "id": "urn:demo:echo:v1",
+  "title": "Echo",
+  "description": "A self-contained demo Thing: its actions call a public HTTP echo service, so the MCP server works out of the box with no local device.",
+  "securityDefinitions": { "nosec_sc": { "scheme": "nosec" } },
+  "security": ["nosec_sc"],
+  "actions": {
+    "ping": {
+      "description": "Echo back a message and the current time.",
+      "input": { "type": "object", "properties": { "message": { "type": "string" } } },
+      "idempotent": true,
+      "forms": [{ "href": "https://httpbin.org/anything", "htv:methodName": "POST" }]
+    },
+    "now": {
+      "description": "Return the server's view of the request (a GET echo).",
+      "input": { "type": "object" },
+      "idempotent": true,
+      "forms": [{ "href": "https://httpbin.org/get" }]
+    }
+  }
+}
