@@ -1,14 +1,19 @@
 # Mapping a Thing Description to agent tools
 
-This document specifies how a [W3C Thing Description](https://www.w3.org/TR/wot-thing-description11/)
-becomes the tools an LLM agent can call, and how a call from the agent becomes a
-real request to the system. It is the one layer thingctx defines that is not
-already a W3C standard. The description format, the transport bindings, and
-discovery are W3C Recommendations; this mapping sits on top of them.
+A Thing Description and an agent's tools are two different shapes, and something
+has to convert between them. That conversion is the one layer thingctx defines
+that is not already a W3C standard. The description format, the transport
+bindings, and discovery are W3C Recommendations; this mapping sits on top of them.
 
-The mapping is deterministic. Anyone who implements it produces the same tools
+This document specifies the mapping so the conversion is not an implementation
+detail. It is deterministic: anyone who implements it produces the same tools
 from the same Thing Description, so a description authored once behaves the same
-across implementations. thingctx is one such implementation.
+across implementations. That is the point of writing it down. thingctx is one
+such implementation; an MCP server built on the same rules, or another library,
+would produce the same tools.
+
+It specifies two directions. A Thing Description becomes the tools an agent can
+call. A call from the agent becomes a real request to the system.
 
 ## Terminology
 
@@ -149,11 +154,8 @@ This describes the mapping as implemented today, not an intended future state.
 - Only the HTTP, MQTT, and local bindings are mapped. Other WoT bindings, such as
   CoAP and WebSocket, are not yet implemented.
 
-## Why this is specified
+## Status
 
-The mapping is the interoperability surface. Two implementations that follow it
-produce the same tools from the same Thing Description, so a description authored
-once works the same whether it is driven by thingctx, by an MCP server built on
-the same rules, or by another library. It is a convention, not a wire protocol.
-Its natural long-term home is a W3C Web of Things note on consuming Thing
-Descriptions as agent tools, for which this document is a starting point.
+This is a convention, not a wire protocol. Its natural long-term home is a W3C
+Web of Things note on consuming Thing Descriptions as agent tools, for which this
+document is a starting point.
