@@ -29,9 +29,10 @@ from thingctx.auth.credentials import (
 __all__ = ["MqttAuthPlan", "apply_mqtt"]
 
 
-@dataclass
+@dataclass(repr=False)
 class MqttAuthPlan:
-    """How to authenticate an MQTT connection."""
+    """How to authenticate an MQTT connection. Holds plaintext (username/
+    password) only at the point of use; its ``repr`` masks credentials."""
 
     username: str | None = None
     password: str | None = None
@@ -42,6 +43,14 @@ class MqttAuthPlan:
     @property
     def has_credentials(self) -> bool:
         return any((self.username is not None, self.password is not None, self.tls, self.enhanced))
+
+    def __repr__(self) -> str:
+        return (
+            f"MqttAuthPlan(username={'***' if self.username is not None else None}, "
+            f"password={'***' if self.password is not None else None}, "
+            f"tls={self.tls!r}, enhanced={self.enhanced!r}, "
+            f"properties={sorted(self.properties)!r})"
+        )
 
 
 def apply_mqtt(creds: list[Credential]) -> MqttAuthPlan:

@@ -30,16 +30,27 @@ from thingctx.auth.sigv4 import _region_service, sigv4_sign
 __all__ = ["HttpAuthPlan", "apply_http", "register_signer"]
 
 
-@dataclass
+@dataclass(repr=False)
 class HttpAuthPlan:
     """How to authenticate one HTTP request: headers/params merged before the
     request is built, signers run on the assembled request, and an optional
-    client-level ``cert`` (mutual TLS)."""
+    client-level ``cert`` (mutual TLS).
+
+    Carries plaintext (an ``Authorization`` header, an API key) only at the point
+    of use; its ``repr`` masks those values so it is safe to log."""
 
     headers: dict = field(default_factory=dict)
     params: dict = field(default_factory=dict)
     signers: list = field(default_factory=list)  # Callable[[request], Any]
     cert: Any = None  # httpx 'cert=' value
+
+    def __repr__(self) -> str:
+        # Header and param values and the cert can hold secrets; names and flags only.
+        return (
+            f"HttpAuthPlan(headers={sorted(self.headers)!r}, "
+            f"params={sorted(self.params)!r}, signers={len(self.signers)}, "
+            f"cert={'***' if self.cert else None})"
+        )
 
 
 def _httpx_cert(c: ClientCertificate) -> Any:

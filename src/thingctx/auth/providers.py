@@ -127,7 +127,9 @@ class BasicAuth(_BaseAuth):
 
     async def resolve(self, ctx: AuthContext) -> Credential | None:
         cred = ctx.credential
-        if isinstance(cred, (tuple, list)) and len(cred) == 2:
+        if not cred:  # no secret supplied means no credential (never a "None" login)
+            return None
+        if isinstance(cred, tuple | list) and len(cred) == 2:
             return BasicCredential(username=str(cred[0]), password=str(cred[1]))
         if isinstance(cred, dict):
             return BasicCredential(
@@ -214,7 +216,7 @@ class OAuth2ClientCredentialsAuth(_BaseAuth):
     def _creds(cred: Any) -> tuple[str | None, str | None]:
         if isinstance(cred, dict):
             return cred.get("client_id"), cred.get("client_secret")
-        if isinstance(cred, (tuple, list)) and len(cred) == 2:
+        if isinstance(cred, tuple | list) and len(cred) == 2:
             return cred[0], cred[1]
         if isinstance(cred, str) and ":" in cred:
             cid, sec = cred.split(":", 1)
