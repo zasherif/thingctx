@@ -76,6 +76,11 @@ from thingctx.thing import (
     actions_to_tools,
     parse_thing,
 )
+from thingctx.trust import (
+    ApprovalRequest,
+    Check,
+    VerifyReport,
+)
 from thingctx.validate import TDValidationError, validate_td
 
 __version__ = "0.1.3"
@@ -133,4 +138,7 @@ __all__ = [
     "register_signer",
     "apply_mqtt",
     "MqttAuthPlan",
+    "ApprovalRequest",
+    "VerifyReport",
+    "Check",
 ]
