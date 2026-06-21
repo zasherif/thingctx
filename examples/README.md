@@ -13,3 +13,18 @@ Run from the repo root with `PYTHONPATH=src`.
 | [registry/](registry/) | Standalone TDs. Point `thingctx-mcp` or `from_registry` here. |
 
 01/02 need no model. The pump device is [_pump.py](_pump.py) (HTTP + SSE + MQTT).
+
+## Media (audio/video)
+
+The continuous-binary plane: consume frames from a source, or publish them to a
+target. Needs PyAV (`pip install 'thingctx[media]'`); a few are gated on
+`mediamtx`/`ffmpeg` or an LLM key.
+
+| | |
+|--|--|
+| [07_media_live.py](07_media_live.py) | Consume a stream resolved from a web page (yt-dlp); optional authenticated/private path. |
+| [08_media_vlm.py](08_media_vlm.py) | Feed a sampled frame to a VLM. |
+| [09_rtsp_local.py](09_rtsp_local.py) | Authenticated RTSP end to end, fully local (MediaMTX + auth layer). |
+| [10_media_clip.py](10_media_clip.py) | Multi-frame sampling from a clip for a VLM. |
+| [11_media_video.py](11_media_video.py) | Parameterized video-understanding service: pass a clip URL at call time. |
+| [12_media_publish.py](12_media_publish.py) | The publish path; encode and push frames to a file or live RTSP (round trip verified). |
