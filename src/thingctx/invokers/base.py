@@ -159,7 +159,17 @@ class _AuthBinding:
 
 
 def select_invoker(invokers: list[Invoker], form: WoTForm) -> Invoker | None:
-    """Pick the invoker that handles ``form``'s transport scheme."""
+    """Pick the invoker for ``form``.
+
+    Content aware invokers (e.g. media) opt in with a ``handles(form)`` method
+    and take precedence; a form can route by more than its scheme (an http(s)
+    href carrying a media hint goes to the media invoker, not http). Everything
+    else routes by transport scheme.
+    """
+    for inv in invokers:
+        handles = getattr(inv, "handles", None)
+        if callable(handles) and handles(form):
+            return inv
     want = form.scheme
     for inv in invokers:
         schemes = getattr(inv, "schemes", None) or (inv.scheme,)
