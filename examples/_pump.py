@@ -292,7 +292,7 @@ def _ollama_models() -> list[str]:
 
 
 def pick_llm_model() -> str | None:
-    """A text LLM litellm can drive: a local Ollama Qwen, else an API key,
+    """A text LLM litellm can drive: a local Ollama Qwen, else OpenRouter,
     else None."""
     import os
 
@@ -302,8 +302,33 @@ def pick_llm_model() -> str | None:
             return f"ollama/{want}"
     if names:
         return f"ollama/{names[0]}"
-    if os.environ.get("ANTHROPIC_API_KEY"):
-        return "anthropic/claude-sonnet-4-6"
-    if os.environ.get("OPENAI_API_KEY"):
-        return "gpt-4o"
+    if os.environ.get("OPENROUTER_API_KEY"):
+        return "openrouter/google/gemini-2.5-flash"
+    return None
+
+
+_VLM_HINTS = ("vl", "vision", "llava", "moondream", "minicpm-v", "bakllava")
+
+
+def pick_vlm_model() -> str | None:
+    """A vision LLM litellm can drive: an explicit override, else the smallest
+    local Ollama vision model, else OpenRouter, else None."""
+    import os
+    import re
+
+    if os.environ.get("THINGCTX_VLM_MODEL"):
+        return os.environ["THINGCTX_VLM_MODEL"]
+
+    def _params_b(name: str) -> float:
+        m = re.search(r"(\d+(?:\.\d+)?)b", name.lower())
+        return float(m.group(1)) if m else 999.0
+
+    vision = sorted(
+        (n for n in _ollama_models() if any(h in n.lower() for h in _VLM_HINTS)),
+        key=_params_b,
+    )
+    if vision:
+        return f"ollama_chat/{vision[0]}"
+    if os.environ.get("OPENROUTER_API_KEY"):
+        return "openrouter/google/gemini-2.5-flash"
     return None
