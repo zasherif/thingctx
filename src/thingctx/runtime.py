@@ -12,6 +12,7 @@ import json
 from typing import Any
 
 from thingctx.invokers import HttpInvoker, Invoker, LocalInvoker, select_invoker
+from thingctx.invokers.media import is_media_form
 from thingctx.thing import (
     WoTAction,
     WoTThing,
@@ -93,6 +94,20 @@ class ThingClient:
             s for inv in self._invokers for s in (getattr(inv, "schemes", None) or (inv.scheme,))
         )
 
+        # Media affordances are continuous streams, not request/response: they
+        # are consumed via frames(), never invoke(). Split them out of the
+        # invoke route and the LLM tool specs so a tool-calling loop never tries
+        # to invoke() one; expose them through list_media()/frames() instead.
+        self._media: dict[str, WoTAction] = {}
+        for name, action in list(self._route.items()):
+            if any(is_media_form(f) for f in action.forms):
+                self._media[name] = action
+                del self._route[name]
+        if self._media:
+            self._tool_specs = [
+                s for s in self._tool_specs if s.get("function", {}).get("name") not in self._media
+            ]
+
     async def aclose(self) -> None:
         """Release any pooled transport resources (e.g. an invoker's reused
         HTTP client). Safe to call more than once."""
@@ -141,6 +156,11 @@ class ThingClient:
         """Invoke one action by routing to the transport its form names.
         ``arguments`` defaults to ``{}`` (for no-input actions)."""
         arguments = arguments or {}
+        if tool_name in self._media:
+            return {
+                "error": f"{tool_name} is a media stream; consume it with client.frames(...)",
+                "media": True,
+            }
         action = self._route.get(tool_name)
         if action is None:
             return {"error": f"unknown action: {tool_name}"}
@@ -172,6 +192,19 @@ class ThingClient:
 
     def list_events(self) -> list[str]:
         return list(self._events)
+
+    def list_media(self) -> list[str]:
+        """Names of media affordances (continuous audio/video streams). Consume
+        them with frames(); they are not in list_actions()."""
+        return list(self._media)
+
+    def media_form(self, name: str):
+        """The media form backing a media affordance, or None. Lets callers read
+        the form's media hint (e.g. a snapshot default) without reaching in."""
+        action = self._media.get(name)
+        if action is None:
+            return None
+        return next((f for f in action.forms if is_media_form(f)), None)
 
     async def read_property(self, name: str) -> Any:
         """Read a property's current value."""
@@ -218,6 +251,59 @@ class ThingClient:
             return _empty_aiter(f"no subscribable transport for {name}")
         bare = target.name
         return await invoker.subscribe(bare, form)
+
+    async def frames(
+        self,
+        name: str,
+        arguments: dict[str, Any] | None = None,
+        *,
+        track: str = "video",
+    ):
+        """Open a media affordance and yield decoded frames. Returns an async
+        iterator; ``track`` selects video or audio.
+
+            async for frame in await client.frames("cam-1.watch"):
+                ...
+        """
+        action = self._media.get(name)
+        if action is None:
+            return _empty_aiter(f"unknown media affordance: {name}")
+        form = next((f for f in action.forms if is_media_form(f)), None)
+        invoker = select_invoker(self._invokers, form) if form else None
+        if invoker is None or not hasattr(invoker, "frames"):
+            return _empty_aiter(f"no media transport for {name}; register MediaInvoker")
+        import dataclasses
+
+        href, rest = form.fill(arguments or {})
+        filled = dataclasses.replace(form, href=href) if href != form.href else form
+        return invoker.frames(action, filled, rest, track=track)
+
+    async def publish(
+        self,
+        name: str,
+        frames,
+        arguments: dict[str, Any] | None = None,
+        *,
+        track: str = "video",
+    ) -> None:
+        """Push an async iterator of frames to a media affordance's ingest
+        target (a URL or a file). The outbound mirror of ``frames()``; returns
+        when the source is exhausted.
+
+            await client.publish("studio.broadcast", frame_source())
+        """
+        action = self._media.get(name)
+        if action is None:
+            raise KeyError(f"unknown media affordance: {name}")
+        form = next((f for f in action.forms if is_media_form(f)), None)
+        invoker = select_invoker(self._invokers, form) if form else None
+        if invoker is None or not hasattr(invoker, "publish"):
+            raise RuntimeError(f"no media transport for {name}; register MediaInvoker")
+        import dataclasses
+
+        href, rest = form.fill(arguments or {})
+        filled = dataclasses.replace(form, href=href) if href != form.href else form
+        await invoker.publish(action, filled, frames, rest, track=track)
 
     async def verify(self, thing_id: str | None = None) -> list[VerifyReport]:
         """Ground each Thing's TD against the live endpoint: read every
