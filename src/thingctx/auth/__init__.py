@@ -38,6 +38,13 @@ from thingctx.auth.credentials import (
     SignatureCredential,
 )
 from thingctx.auth.http import HttpAuthPlan, apply_http, register_signer
+from thingctx.auth.media import (
+    MediaAuthPlan,
+    apply_media,
+    av_auth_options,
+    redact_url,
+    ytdlp_auth_options,
+)
 from thingctx.auth.mqtt import MqttAuthPlan, apply_mqtt
 from thingctx.auth.providers import (
     ApiKeyAuth,
@@ -91,6 +98,11 @@ __all__ = [
     "register_signer",
     "apply_mqtt",
     "MqttAuthPlan",
+    "apply_media",
+    "MediaAuthPlan",
+    "av_auth_options",
+    "ytdlp_auth_options",
+    "redact_url",
     # AWS primitive
     "sigv4_sign",
     "_aws_region_service",
