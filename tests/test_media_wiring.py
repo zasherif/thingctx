@@ -1,0 +1,237 @@
+"""Wiring tests: media routing precedence, ThingClient.frames(), the media /
+invoke split, and LLMHost.see() image handoff. All offline (fake backend, fake
+chat_fn); no network, no real model."""
+
+from __future__ import annotations
+
+import asyncio
+import threading
+from collections.abc import Iterator
+
+import numpy as np
+
+from thingctx.contrib.llm import LLMHost
+from thingctx.invokers import HttpInvoker, select_invoker
+from thingctx.invokers.media import Frame, MediaInvoker, is_media_form
+from thingctx.runtime import ThingClient
+from thingctx.thing import WoTForm
+
+
+class _FakeBackend:
+    def __init__(self, count: int = 4):
+        self.count = count
+
+    def can_open(self, url: str, hint: dict) -> bool:
+        return True
+
+    def read(self, url: str, *, options: dict, stop: threading.Event) -> Iterator[Frame]:
+        kind = options.get("track", "video")
+        for i in range(self.count):
+            if stop.is_set():
+                return
+            yield Frame(data=i, kind=kind, pts=float(i))
+
+    def write(self, frames, target, *, options, stop):  # noqa: ANN001
+        raise NotImplementedError
+
+
+def _media_td(href: str, hint: dict | None = None) -> dict:
+    form: dict = {"href": href}
+    if hint is not None:
+        form["x-thingctx-media"] = hint
+    return {
+        "@context": "https://www.w3.org/2022/wot/td/v1.1",
+        "id": "urn:dev:cam1",
+        "title": "cam",
+        "actions": {"watch": {"forms": [form]}},
+    }
+
+
+def _client(href: str, hint: dict | None = None) -> ThingClient:
+    return ThingClient(
+        tds=[_media_td(href, hint)],
+        invokers=[HttpInvoker(), MediaInvoker(backends=[_FakeBackend()])],
+    )
+
+
+# routing precedence
+
+
+def test_is_media_form():
+    assert is_media_form(WoTForm(href="rtsp://x/y"))
+    assert is_media_form(WoTForm(href="https://x/y", raw={"x-thingctx-media": {"a": 1}}))
+    assert not is_media_form(WoTForm(href="https://x/y"))
+
+
+def test_media_wins_over_http_for_hinted_form():
+    http = HttpInvoker()
+    media = MediaInvoker(backends=[_FakeBackend()])
+    # http(s) href + media hint -> media invoker, not http.
+    hinted = WoTForm(href="https://x/y", raw={"x-thingctx-media": {"k": 1}})
+    assert select_invoker([http, media], hinted) is media
+    # rtsp scheme -> media even though http is listed first.
+    assert select_invoker([http, media], WoTForm(href="rtsp://x/y")) is media
+    # plain http(s) -> http, untouched.
+    assert select_invoker([http, media], WoTForm(href="https://x/y")) is http
+
+
+# ThingClient frames() and media/invoke split
+
+
+def test_media_action_split_from_invoke_tools():
+    client = _client("rtsp://cam/stream")
+    assert client.list_actions() == []  # not an invoke tool
+    assert client.list_media() == ["cam1.watch"]
+
+
+def test_invoke_on_media_is_redirected():
+    client = _client("rtsp://cam/stream")
+    res = asyncio.run(client.invoke("cam1.watch"))
+    assert res.get("media") is True
+    assert "frames(" in res["error"]
+
+
+def test_client_frames_yields_video_and_audio():
+    client = _client("rtsp://cam/stream")
+
+    async def run():
+        vid = [f async for f in await client.frames("cam1.watch", track="video")]
+        aud = [f async for f in await client.frames("cam1.watch", track="audio")]
+        return vid, aud
+
+    vid, aud = asyncio.run(run())
+    assert [f.data for f in vid] == [0, 1, 2, 3]
+    assert all(f.kind == "video" for f in vid)
+    assert all(f.kind == "audio" for f in aud)
+
+
+def test_frames_over_http_hinted_form():
+    # An http(s) href with a media hint still routes to media via the client.
+    client = _client("https://example.com/clip.mp4", hint={"container": "mp4"})
+    assert client.list_media() == ["cam1.watch"]
+
+    async def run():
+        return [f async for f in await client.frames("cam1.watch")]
+
+    assert len(asyncio.run(run())) == 4
+
+
+def test_frames_unknown_affordance_is_empty():
+    client = _client("rtsp://cam/stream")
+
+    async def run():
+        return [f async for f in await client.frames("cam1.nope")]
+
+    assert asyncio.run(run()) == []
+
+
+# VLM see() handoff
+
+
+def test_see_passes_frame_as_image():
+    saw: dict = {}
+
+    async def chat(messages, tools):
+        user = next(m for m in messages if m["role"] == "user")
+        saw["parts"] = user["content"]
+        return {"role": "assistant", "content": "ok"}
+
+    client = _client("rtsp://cam/stream")
+    host = LLMHost(client, chat_fn=chat)
+    frame = Frame(data=np.zeros((8, 8, 3), dtype=np.uint8), kind="video")
+    answer = asyncio.run(host.see(frame, "what is this?"))
+
+    assert answer == "ok"
+    parts = saw["parts"]
+    assert any(p.get("type") == "text" for p in parts)
+    img = next(p for p in parts if p.get("type") == "image_url")
+    assert img["image_url"]["url"].startswith("data:image/jpeg;base64,")
+
+
+def test_see_passes_a_list_of_frames_as_a_clip():
+    saw: dict = {}
+
+    async def chat(messages, tools):
+        user = next(m for m in messages if m["role"] == "user")
+        saw["parts"] = user["content"]
+        return {"role": "assistant", "content": "ok"}
+
+    client = _client("rtsp://cam/stream")
+    host = LLMHost(client, chat_fn=chat)
+    clip = [Frame(data=np.zeros((8, 8, 3), dtype=np.uint8), kind="video") for _ in range(3)]
+    asyncio.run(host.see(clip, "describe this clip"))
+
+    imgs = [p for p in saw["parts"] if p.get("type") == "image_url"]
+    assert len(imgs) == 3
+    assert all(p["image_url"]["url"].startswith("data:image/jpeg;base64,") for p in imgs)
+
+
+def test_see_video_sends_a_native_video_url():
+    saw: dict = {}
+
+    async def chat(messages, tools):
+        user = next(m for m in messages if m["role"] == "user")
+        saw["parts"] = user["content"]
+        return {"role": "assistant", "content": "ok"}
+
+    client = _client("rtsp://cam/stream")
+    host = LLMHost(client, chat_fn=chat)
+    asyncio.run(host.see_video("https://example.com/clip.mp4", "summarize"))
+
+    vid = next(p for p in saw["parts"] if p.get("type") == "video_url")
+    assert vid["video_url"]["url"] == "https://example.com/clip.mp4"
+
+
+def test_sample_frames_spaces_by_pts():
+    from thingctx.invokers.media import sample_frames
+
+    async def gen():
+        for i in range(20):
+            yield Frame(data=i, kind="video", pts=float(i))
+
+    picked = asyncio.run(sample_frames(gen(), count=4, every=3.0))
+    assert [f.pts for f in picked] == [0.0, 3.0, 6.0, 9.0]
+
+
+# parameterized media source (URL passed at call time)
+
+
+def test_fill_plus_var_substitutes_url_verbatim():
+    # {var} percent-encodes; {+var} (reserved expansion) keeps the URL intact.
+    enc = WoTForm(href="https://api/x?u={u}")
+    raw = WoTForm(href="{+u}")
+    url = "https://www.twitch.tv/c?x=1"
+    assert enc.fill({"u": url})[0] == "https://api/x?u=https%3A%2F%2Fwww.twitch.tv%2Fc%3Fx%3D1"
+    assert raw.fill({"u": url})[0] == url
+
+
+def test_frames_with_url_argument_routes_verbatim_to_backend():
+    seen: dict = {}
+
+    class _RecordingBackend(_FakeBackend):
+        def read(self, url, *, options, stop):
+            seen["url"] = url
+            yield from super().read(url, options=options, stop=stop)
+
+    td = {
+        "@context": "https://www.w3.org/2022/wot/td/v1.1",
+        "id": "urn:dev:pages",
+        "title": "pages",
+        "actions": {
+            "watch": {
+                "uriVariables": {"url": {"type": "string"}},
+                "forms": [{"href": "{+url}", "x-thingctx-media": {"resolve": "page"}}],
+            }
+        },
+    }
+    client = ThingClient(
+        tds=[td], invokers=[HttpInvoker(), MediaInvoker(backends=[_RecordingBackend()])]
+    )
+    target = "https://vimeo.com/123?h=abc"
+
+    async def run():
+        return [f async for f in await client.frames("pages.watch", {"url": target})]
+
+    frames = asyncio.run(run())
+    assert len(frames) == 4
+    assert seen["url"] == target  # passed through unencoded, end to end

@@ -74,6 +74,81 @@ class LLMHost:
         answer. See resilient for the weaker-model guards."""
         return await self._run(prompt)
 
+    async def see(self, image: Any, instruction: str) -> str:
+        """Run one vision turn over an image (or several) plus an instruction,
+        with the Thing's tools available. ``image`` is a media :class:`Frame`,
+        raw JPEG bytes, an image URL (http(s) or data URL), or a list of any of
+        these. A list is sent as a sequence of stills; a portable clip the
+        model reads as motion over time, on any vision capable backend.
+
+            frame = await anext(await client.frames("cam-1.watch"))
+            print(await host.see(frame, "Is anyone at the door?"))
+
+            clip = await sample_frames(await client.frames("cam-1.watch"), count=6)
+            print(await host.see(clip, "Describe what happens in this clip."))
+        """
+        images = list(image) if isinstance(image, list | tuple) else [image]
+        content: list[dict[str, Any]] = [{"type": "text", "text": instruction}]
+        for im in images:
+            content.append({"type": "image_url", "image_url": {"url": self._as_image_url(im)}})
+        return await self._run(content)
+
+    async def see_video(self, video: Any, instruction: str) -> str:
+        """Run one vision turn over a video clip plus an instruction, sent as a
+        native ``video_url`` content part. ``video`` is a video URL (http(s) or
+        a ``data:video/...;base64,`` URL), a local file path, or raw bytes; a
+        path or bytes is inlined as a data URL (more reliable than asking the
+        provider to fetch a remote URL).
+
+        Unlike :meth:`see`, the model receives the clip itself (it samples
+        frames and decodes audio on its side), so this needs a provider with
+        native video input (for example a hosted or self hosted multimodal
+        model). Image only backends do not accept it; use :meth:`see` with a
+        list of frames there.
+
+            print(await host.see_video(url, "Summarize this clip."))
+        """
+        content = [
+            {"type": "text", "text": instruction},
+            {"type": "video_url", "video_url": {"url": self._as_video_url(video)}},
+        ]
+        return await self._run(content)
+
+    @staticmethod
+    def _as_video_url(video: Any) -> str:
+        import base64
+        import os
+
+        if isinstance(video, bytes | bytearray):
+            payload = base64.b64encode(bytes(video)).decode("ascii")
+            return "data:video/mp4;base64," + payload
+        if isinstance(video, str):
+            # A URL (remote or data:) passes through; a local file is inlined.
+            if "://" in video or video.startswith("data:"):
+                return video
+            if os.path.isfile(video):
+                with open(video, "rb") as fh:
+                    payload = base64.b64encode(fh.read()).decode("ascii")
+                return "data:video/mp4;base64," + payload
+            return video
+        raise TypeError("see_video() expects a URL, a file path, or video bytes")
+
+    @staticmethod
+    def _as_image_url(image: Any) -> str:
+        if isinstance(image, str):
+            return image
+        if isinstance(image, bytes | bytearray):
+            import base64
+
+            payload = base64.b64encode(bytes(image)).decode("ascii")
+            return "data:image/jpeg;base64," + payload
+        from thingctx.invokers.media import Frame
+        from thingctx.invokers.media.encode import frame_to_data_url
+
+        if isinstance(image, Frame):
+            return frame_to_data_url(image)
+        raise TypeError("see() expects a Frame, JPEG bytes, or an image URL")
+
     async def _run(self, user_content) -> str:
         # user_content is a plain string or OpenAI multimodal content
         # (a list of text/image_url parts), so a VLM host can pass images.
