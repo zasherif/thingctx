@@ -22,7 +22,7 @@ import asyncio
 from _pump import DEVICE_TOKEN, pick_llm_model, start_device
 
 import thingctx
-from thingctx import HttpInvoker, LocalInvoker, MqttInvoker
+from thingctx import HttpBinding, LocalBinding, MqttBinding
 from thingctx.extensions.prompts import get_prompt, list_prompts
 
 
@@ -34,15 +34,15 @@ async def main() -> None:
 
     pump, td, stop = start_device()
     try:
-        # Same TD + invokers as 02, the full surface. The only new thing
+        # Same TD + bindings as 02, the full surface. The only new thing
         # is `model=`: the LLM now drives it.
         host = thingctx.from_td(
             td,
             model=model,
-            invokers=[
-                LocalInvoker(pump),
-                HttpInvoker(credentials={"bearer_sc": DEVICE_TOKEN}),
-                MqttInvoker(timeout=5),
+            bindings=[
+                LocalBinding(pump),
+                HttpBinding(credentials={"bearer_sc": DEVICE_TOKEN}),
+                MqttBinding(timeout=5),
             ],
             resilient=True,
         )

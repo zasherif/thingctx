@@ -181,15 +181,15 @@ def start_http_mcp(td) -> tuple[subprocess.Popen, str]:
 
 async def ttfc_thingctx(pump, td) -> float:
     """consume the TD (validate against the W3C schema) + first invoke."""
-    from thingctx import HttpInvoker, LocalInvoker, MqttInvoker, ThingClient
+    from thingctx import HttpBinding, LocalBinding, MqttBinding, ThingClient
 
     t0 = time.perf_counter()
     client = ThingClient(
         tds=[td],
-        invokers=[
-            LocalInvoker(pump),
-            HttpInvoker(credentials={"bearer_sc": DEVICE_TOKEN}),
-            MqttInvoker(timeout=5),
+        bindings=[
+            LocalBinding(pump),
+            HttpBinding(credentials={"bearer_sc": DEVICE_TOKEN}),
+            MqttBinding(timeout=5),
         ],
         validate=True,
     )

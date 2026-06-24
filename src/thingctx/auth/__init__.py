@@ -3,7 +3,7 @@
 The layer is split cleanly in two so auth never leaks into a transport:
 
 * **Providers** (``providers``) resolve a security scheme + runtime secret
-  into neutral :class:`Credential` material -- a bearer token, a username/
+  into neutral :class:`Credential` material: a bearer token, a username/
   password, an API key, AWS signing material, a client certificate, enhanced
   auth, or a custom request signer. Token-minting (OAuth2, JWT-bearer) lives
   here. Providers know nothing about HTTP/MQTT/etc.
@@ -12,15 +12,16 @@ The layer is split cleanly in two so auth never leaks into a transport:
   reused unchanged. Adding an auth method is one more provider; existing
   appliers decide whether/how to apply it.
 
-``resolve_credentials`` is the single primitive every invoker shares to turn an
+``resolve_credentials`` is the single primitive every binding shares to turn an
 owner's declared security into :class:`Credential` material. A scheme is only
 *named*; the secret is supplied at runtime, keyed by owner id / slug / scheme
 name, and never lives in the description document.
 
-Custom auth: register a provider whose ``resolve`` returns a built-in
+Custom auth: write a provider (subclass :class:`BaseAuth` for no-op defaults, the
+same base the built-ins use) whose ``resolve`` returns a built-in
 :class:`Credential` (works on every transport) or a :class:`RequestSigner`
-(transport-specific signing), via :func:`register_auth` or
-``HttpInvoker(extra_auth=[...])``.
+(transport-specific signing), and register it via :func:`register_auth` or
+``HttpBinding(extra_auth=[...])``.
 """
 
 from __future__ import annotations
@@ -50,6 +51,7 @@ from thingctx.auth.providers import (
     ApiKeyAuth,
     AuthStrategy,
     AwsSigV4Auth,
+    BaseAuth,
     BasicAuth,
     CredentialProvider,
     DirectCredentialAuth,
@@ -57,9 +59,8 @@ from thingctx.auth.providers import (
     OAuth2ClientCredentialsAuth,
     OAuth2JwtBearerAuth,
     StaticBearerAuth,
-    _BaseAuth,
 )
-from thingctx.auth.registry import DEFAULT_AUTH, AuthRegistry, register_auth
+from thingctx.auth.registry import DEFAULT_AUTH, AuthRegistry, discover_auth, register_auth
 from thingctx.auth.resolve import resolve_credentials
 from thingctx.auth.sigv4 import _aws_region_service, sigv4_sign
 
@@ -69,6 +70,7 @@ __all__ = [
     "AuthRegistry",
     "DEFAULT_AUTH",
     "register_auth",
+    "discover_auth",
     "resolve_credentials",
     # Providers
     "CredentialProvider",
@@ -81,7 +83,7 @@ __all__ = [
     "OAuth2ClientCredentialsAuth",
     "OAuth2JwtBearerAuth",
     "AwsSigV4Auth",
-    "_BaseAuth",
+    "BaseAuth",
     # Neutral credential material
     "Credential",
     "Secret",

@@ -20,8 +20,8 @@ import asyncio
 from _pump import pick_vlm_model
 
 import thingctx
-from thingctx import HttpInvoker
-from thingctx.invokers.media import MediaInvoker, sample_frames
+from thingctx import HttpBinding
+from thingctx.bindings.builtin.media import MediaBinding, sample_frames
 
 # A concrete device: a camera has one stream, so its source is fixed in the TD
 # (unlike the parameterized "video" services in 07/11, which take a source URL arg).
@@ -49,7 +49,7 @@ async def main() -> None:
         print("No vision model reachable. Pull a small one: ollama pull qwen3-vl:2b")
         return
 
-    host = thingctx.from_td(CAMERA_TD, model=model, invokers=[HttpInvoker(), MediaInvoker()])
+    host = thingctx.from_td(CAMERA_TD, model=model, bindings=[HttpBinding(), MediaBinding()])
     print(f"model: {model}\n")
 
     # Sample a few frames spaced ~2s apart; a clip the model reads as stills.

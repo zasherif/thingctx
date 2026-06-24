@@ -23,7 +23,7 @@ import asyncio
 
 from _pump import DEVICE_TOKEN, PumpDevice, start_device
 
-from thingctx import HttpInvoker, LocalInvoker, MqttInvoker, ThingClient
+from thingctx import HttpBinding, LocalBinding, MqttBinding, ThingClient
 
 
 async def main() -> None:
@@ -32,14 +32,14 @@ async def main() -> None:
     try:
         # No server authored. We consume the device's TD and call its
         # endpoints; validate=True checks it against the W3C TD 1.1 schema.
-        # One invoker per transport the TD's forms name: local, http(+bearer),
+        # One binding per transport the TD's forms name: local, http(+bearer),
         # mqtt, covering the full surface.
         client = ThingClient(
             tds=[td],
-            invokers=[
-                LocalInvoker(pump),
-                HttpInvoker(credentials={"bearer_sc": DEVICE_TOKEN}),
-                MqttInvoker(timeout=5),
+            bindings=[
+                LocalBinding(pump),
+                HttpBinding(credentials={"bearer_sc": DEVICE_TOKEN}),
+                MqttBinding(timeout=5),
             ],
             validate=True,
         )

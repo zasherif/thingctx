@@ -3,7 +3,7 @@ thingctx a brand-new scheme, or override how a built-in scheme is handled.
 
 A provider's ``resolve`` returns neutral credential material: a header (here an
 ApiKeyCredential) for token-attachers, or a RequestSigner for schemes that must
-mutate the assembled request. These run offline -- they assert the headers a
+mutate the assembled request. These run offline; they assert the headers a
 provider contributes and that a custom request-signer runs on the request.
 """
 
@@ -15,11 +15,11 @@ from thingctx.auth import (
     ApiKeyCredential,
     AuthRegistry,
     AwsSigV4Auth,
+    BaseAuth,
     RequestSigner,
     StaticBearerAuth,
-    _BaseAuth,
 )
-from thingctx.invokers import HttpInvoker
+from thingctx.bindings import HttpBinding
 from thingctx.runtime import ThingClient
 
 
@@ -36,7 +36,7 @@ def _td(slug: str, scheme: dict) -> dict:
     }
 
 
-class _DemoHeaderAuth(_BaseAuth):
+class _DemoHeaderAuth(BaseAuth):
     """A made-up scheme that attaches a simple custom header. A token-attacher,
     so it resolves to header material (an ApiKeyCredential)."""
 
@@ -50,15 +50,15 @@ class _DemoHeaderAuth(_BaseAuth):
 
 
 async def test_custom_scheme_via_extra_auth():
-    http = HttpInvoker(credentials={"thingy": "SEKRET"}, extra_auth=[_DemoHeaderAuth()])
-    client = ThingClient(tds=[_td("thingy", {"scheme": "x-demo"})], invokers=[http])
+    http = HttpBinding(credentials={"thingy": "SEKRET"}, extra_auth=[_DemoHeaderAuth()])
+    client = ThingClient(tds=[_td("thingy", {"scheme": "x-demo"})], bindings=[http])
     action = client.action_for("thingy.ping")
     headers, params, signers, _cert = await http._prepare(action.thing_id)
     assert headers["X-Demo-Key"] == "demo SEKRET"
     assert not signers
 
 
-class _OverrideBearerAuth(_BaseAuth):
+class _OverrideBearerAuth(BaseAuth):
     """Overrides the built-in bearer handling to use a different header."""
 
     name = "override-bearer"
@@ -71,8 +71,8 @@ class _OverrideBearerAuth(_BaseAuth):
 
 
 async def test_user_strategy_overrides_builtin():
-    http = HttpInvoker(credentials={"thingy": "TKN"}, extra_auth=[_OverrideBearerAuth()])
-    client = ThingClient(tds=[_td("thingy", {"scheme": "bearer"})], invokers=[http])
+    http = HttpBinding(credentials={"thingy": "TKN"}, extra_auth=[_OverrideBearerAuth()])
+    client = ThingClient(tds=[_td("thingy", {"scheme": "bearer"})], bindings=[http])
     action = client.action_for("thingy.ping")
     headers, _params, _signers, _cert = await http._prepare(action.thing_id)
     # The override wins: custom header set, default Authorization not.
@@ -80,7 +80,7 @@ async def test_user_strategy_overrides_builtin():
     assert "Authorization" not in headers
 
 
-class _StampSigner(_BaseAuth):
+class _StampSigner(BaseAuth):
     """A custom request-signer: resolves to a RequestSigner that stamps a header
     on the assembled request."""
 
@@ -99,8 +99,8 @@ class _StampSigner(_BaseAuth):
 
 
 async def test_custom_request_signer_is_invoked():
-    http = HttpInvoker(credentials={"thingy": "S"}, extra_auth=[_StampSigner()])
-    client = ThingClient(tds=[_td("thingy", {"scheme": "x-stamp"})], invokers=[http])
+    http = HttpBinding(credentials={"thingy": "S"}, extra_auth=[_StampSigner()])
+    client = ThingClient(tds=[_td("thingy", {"scheme": "x-stamp"})], bindings=[http])
     action = client.action_for("thingy.ping")
     headers, params, signers, _cert = await http._prepare(action.thing_id)
     assert len(signers) == 1  # scheduled as a signer, not a header-attacher

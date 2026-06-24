@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from thingctx import LocalInvoker, ThingClient
+from thingctx import LocalBinding, ThingClient
 
 TD = {
     "@context": "https://www.w3.org/2022/wot/td/v1.1",
@@ -29,10 +29,10 @@ async def test_td_becomes_callable_mcp_tools():
 
     from thingctx.integrations.mcp import build_mcp_server
 
-    inv = LocalInvoker(
+    inv = LocalBinding(
         {"status": lambda: {"rpm": 0}, "set_speed": lambda rpm=0: {"ok": True, "rpm": rpm}}
     )
-    server = build_mcp_server(ThingClient(tds=[TD], invokers=[inv]), name="pump")
+    server = build_mcp_server(ThingClient(tds=[TD], bindings=[inv]), name="pump")
     async with connect(server) as s:
         await s.initialize()
         tools = {t.name: t for t in (await s.list_tools()).tools}
@@ -61,8 +61,8 @@ async def test_media_td_becomes_snapshot_image_tool():
     import numpy as np
     from mcp.shared.memory import create_connected_server_and_client_session as connect
 
+    from thingctx.bindings.builtin.media import Frame, MediaBinding
     from thingctx.integrations.mcp import build_mcp_server
-    from thingctx.invokers.media import Frame, MediaInvoker
 
     class _FakeBackend:
         def can_open(self, url, hint):
@@ -74,7 +74,7 @@ async def test_media_td_becomes_snapshot_image_tool():
         def write(self, *a, **k):
             raise NotImplementedError
 
-    client = ThingClient(tds=[CAMERA_TD], invokers=[MediaInvoker(backends=[_FakeBackend()])])
+    client = ThingClient(tds=[CAMERA_TD], bindings=[MediaBinding(backends=[_FakeBackend()])])
     server = build_mcp_server(client, name="cam")
     media_name = client.list_media()[0]  # e.g. "cam.watch"
     snapshot = f"{media_name.split('.', 1)[0]}.snapshot"  # becomes "cam.snapshot"
@@ -105,8 +105,8 @@ async def test_media_snapshot_can_return_a_clip():
     import numpy as np
     from mcp.shared.memory import create_connected_server_and_client_session as connect
 
+    from thingctx.bindings.builtin.media import Frame, MediaBinding
     from thingctx.integrations.mcp import build_mcp_server
-    from thingctx.invokers.media import Frame, MediaInvoker
 
     class _ClipBackend:
         def can_open(self, url, hint):
@@ -119,7 +119,7 @@ async def test_media_snapshot_can_return_a_clip():
         def write(self, *a, **k):
             raise NotImplementedError
 
-    client = ThingClient(tds=[CAMERA_TD], invokers=[MediaInvoker(backends=[_ClipBackend()])])
+    client = ThingClient(tds=[CAMERA_TD], bindings=[MediaBinding(backends=[_ClipBackend()])])
     server = build_mcp_server(client, name="cam")
     snapshot = f"{client.list_media()[0].split('.', 1)[0]}.snapshot"
 

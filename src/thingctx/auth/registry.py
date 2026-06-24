@@ -16,7 +16,7 @@ from thingctx.auth.providers import (
     StaticBearerAuth,
 )
 
-__all__ = ["AuthRegistry", "DEFAULT_AUTH", "register_auth"]
+__all__ = ["AuthRegistry", "DEFAULT_AUTH", "discover_auth", "register_auth"]
 
 
 class AuthRegistry:
@@ -74,3 +74,27 @@ def register_auth(strategy: AuthStrategy, *, first: bool = True) -> AuthStrategy
     By default it is inserted at the front, so it takes precedence over the
     built-ins (letting you override how an existing scheme is handled)."""
     return DEFAULT_AUTH.register(strategy, first=first)
+
+
+def discover_auth(*, group: str = "thingctx.auth", register: bool = False) -> list[AuthStrategy]:
+    """Load credential providers advertised by installed packages through entry
+    points, the auth counterpart to ``discover_bindings``.
+
+    Opt in: nothing here runs unless you call it, because importing a provider
+    runs third-party code in process. Each entry point names a zero-argument
+    callable that returns a provider instance. With ``register=True`` each
+    discovered provider is also registered on the default registry (at the front,
+    so it can override a built-in scheme); otherwise they are only returned, for
+    you to register or hand to a binding's ``extra_auth``.
+    """
+    from importlib.metadata import entry_points
+
+    try:
+        eps = entry_points(group=group)
+    except TypeError:  # older selection API
+        eps = entry_points().get(group, [])  # type: ignore[attr-defined]
+    providers = [ep.load()() for ep in eps]
+    if register:
+        for p in providers:
+            register_auth(p)
+    return providers

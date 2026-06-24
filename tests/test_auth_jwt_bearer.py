@@ -3,7 +3,7 @@
 This is how Google Cloud service accounts authenticate: the client signs a JWT
 with its private key (RS256) and exchanges it for a bearer token. The local
 token endpoint *verifies the assertion's signature with the public key*, so the
-test proves thingctx really signs a valid assertion -- not just posts a blob.
+test proves thingctx really signs a valid assertion, not just posts a blob.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ import jwt  # noqa: E402
 from cryptography.hazmat.primitives import serialization  # noqa: E402
 from cryptography.hazmat.primitives.asymmetric import rsa  # noqa: E402
 
-from thingctx import HttpInvoker, parse_thing  # noqa: E402
+from thingctx import HttpBinding, parse_thing  # noqa: E402
 
 GRANT = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 TOKEN = "jwt-minted-access-token"
@@ -139,7 +139,7 @@ def _action_form(base):
 
 async def test_jwt_bearer_signs_valid_assertion_and_attaches_bearer(server):
     base, seen = server
-    inv = HttpInvoker(credentials={"urn:dev:gcp": _cred(base)}).with_security(_thing(base))
+    inv = HttpBinding(credentials={"urn:dev:gcp": _cred(base)}).with_security(_thing(base))
     action, form = _action_form(base)
 
     result = await inv.invoke(action, form, {"x": 1})
@@ -155,7 +155,7 @@ async def test_jwt_bearer_signs_valid_assertion_and_attaches_bearer(server):
 
 async def test_jwt_bearer_token_is_cached(server):
     base, seen = server
-    inv = HttpInvoker(credentials={"urn:dev:gcp": _cred(base)}).with_security(_thing(base))
+    inv = HttpBinding(credentials={"urn:dev:gcp": _cred(base)}).with_security(_thing(base))
     action, form = _action_form(base)
 
     await inv.invoke(action, form, {})

@@ -54,7 +54,7 @@ thingctx = "thingctx.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-thingctx = ["data/*.json"]
+thingctx = ["data/*.json", "py.typed"]
 
 [tool.pytest.ini_options]
 markers = ["network: hits the network; deselect with -m 'not network'"]

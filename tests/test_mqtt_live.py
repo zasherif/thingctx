@@ -3,8 +3,8 @@
 Hermetic and credible: the test launches its *own* Mosquitto on an ephemeral
 port with ``allow_anonymous false`` and a password file, so a connection only
 succeeds if real credentials are presented. It then drives the broker through
-``MqttInvoker`` -- which configures the connection purely from neutral
-credential material resolved by the shared auth layer -- and asserts:
+``MqttBinding``, which configures the connection purely from neutral
+credential material resolved by the shared auth layer, and asserts:
 
 * the right username/password authenticates and a request/reply roundtrip works,
 * a wrong password is rejected by the broker (the auth really is enforced).
@@ -28,7 +28,7 @@ pytest.importorskip("paho.mqtt.client")
 import paho.mqtt.client as mqtt  # noqa: E402
 
 from thingctx import parse_thing  # noqa: E402
-from thingctx.invokers import MqttInvoker  # noqa: E402
+from thingctx.bindings import MqttBinding  # noqa: E402
 
 MOSQUITTO = shutil.which("mosquitto")
 MOSQUITTO_PASSWD = shutil.which("mosquitto_passwd")
@@ -119,7 +119,7 @@ async def test_username_password_authenticates_and_roundtrips(broker):
     responder = _responder(port, topic)
     try:
         thing = parse_thing(_td(port, topic))
-        inv = MqttInvoker(
+        inv = MqttBinding(
             credentials={"urn:dev:pump": {"username": USER, "password": PASSWORD}}
         ).with_security(thing)
         action = SimpleNamespace(thing_id="urn:dev:pump", name="do")

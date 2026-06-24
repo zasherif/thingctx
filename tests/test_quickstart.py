@@ -1,5 +1,5 @@
 """Quickstart hardening: the documented consume-then-invoke path routes
-without manual invoker wiring, and TD fetches send a real User-Agent (some
+without manual binding wiring, and TD fetches send a real User-Agent (some
 hosts, e.g. Cloudflare, reject the default urllib UA with HTTP 403)."""
 
 from __future__ import annotations
@@ -23,15 +23,15 @@ NOSEC_TD = {
 }
 
 
-def test_default_invokers_when_none():
-    c = ThingClient(tds=[NOSEC_TD])  # no invokers passed: should default
-    kinds = {type(i).__name__ for i in c._invokers}
-    assert "HttpInvoker" in kinds and "LocalInvoker" in kinds
+def test_default_bindings_when_none():
+    c = ThingClient(tds=[NOSEC_TD])  # no bindings passed: should default
+    kinds = {type(i).__name__ for i in c._bindings}
+    assert "HttpBinding" in kinds and "LocalBinding" in kinds
 
 
-def test_explicit_empty_invokers_stays_empty():
-    c = ThingClient(tds=[NOSEC_TD], invokers=[])
-    assert c._invokers == []
+def test_explicit_empty_bindings_stays_empty():
+    c = ThingClient(tds=[NOSEC_TD], bindings=[])
+    assert c._bindings == []
 
 
 def test_user_agent_string():

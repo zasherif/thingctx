@@ -1,16 +1,16 @@
-"""Media invoker: pull frames from a stream, or push frames to one.
+"""Media binding: pull frames from a stream, or push frames to one.
 
 The continuous-binary plane (audio/video), distinct from the request/response
-invokers and from the event/subscription plane (MQTT, SSE, Pub/Sub). "Stream"
+bindings and from the event/subscription plane (MQTT, SSE, Pub/Sub). "Stream"
 is overloaded: event subscriptions are streams too, but they carry discrete
 structured messages and are bindable WoT Events. Media is continuous, encoded,
 session oriented, and reached by reference; the runtime never binds it as a
-property value. This invoker opens the session off the event loop and yields
+property value. This binding opens the session off the event loop and yields
 decoded frames as an async iterator (consume), or pushes frames to an ingest
 target (produce). The control around a stream (generate stream, get ingest uri)
 stays on the request/response plane.
 
-Backends are blocking (FFmpeg/PyAV, later GStreamer). The invoker runs them in a
+Backends are blocking (FFmpeg/PyAV, later GStreamer). The binding runs them in a
 worker thread and bridges frames back through a bounded queue. Backpressure is a
 policy: ``latest`` sheds all but the newest frame (live video, low latency),
 ``all`` paces the source to the consumer (lossless). The surface is the same for
@@ -27,8 +27,9 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from thingctx.auth import AuthRegistry, AuthStrategy, apply_media, redact_url
-from thingctx.invokers.base import _AuthBinding
-from thingctx.invokers.media.frame import Frame, MediaBackend
+from thingctx.bindings.base import AuthMixin, ProtocolBinding
+from thingctx.bindings.builtin.media.frame import Frame, MediaBackend
+from thingctx.contracts import implements
 from thingctx.thing import WoTAction, WoTForm
 
 
@@ -62,7 +63,8 @@ def is_media_form(form: WoTForm) -> bool:
     return form.scheme in MEDIA_SCHEMES or bool(_media_hint(form))
 
 
-class MediaInvoker(_AuthBinding):
+@implements(ProtocolBinding)
+class MediaBinding(AuthMixin):
     """Drives media forms. Selected for the media schemes, or for any form
     carrying a media hint. Exposes ``frames()`` (consume) and ``publish()``
     (produce), for both video and audio tracks; ``invoke`` is not the media
@@ -70,7 +72,7 @@ class MediaInvoker(_AuthBinding):
 
     Honors declared security through the transport neutral auth layer: it
     resolves each owner's schemes into neutral credential material (see
-    :class:`_AuthBinding`) and maps it onto the source with ``apply_media``;
+    :class:`AuthMixin`) and maps it onto the source with ``apply_media``;
     URL userinfo, request headers, query tokens, or TLS. No auth logic lives in
     this transport."""
 
@@ -92,7 +94,7 @@ class MediaInvoker(_AuthBinding):
         # Lazy default backends so importing this module never requires the
         # optional media dependencies.
         if backends is None:
-            from thingctx.invokers.media.backends import ExtractorBackend, PyAVBackend
+            from thingctx.bindings.builtin.media.backends import ExtractorBackend, PyAVBackend
 
             backends = [ExtractorBackend(), PyAVBackend()]
         if backpressure not in ("latest", "all"):
@@ -112,14 +114,14 @@ class MediaInvoker(_AuthBinding):
         )
 
     def handles(self, form: WoTForm) -> bool:
-        """Whether this invoker should drive ``form``: a media scheme, or a
+        """Whether this binding should drive ``form``: a media scheme, or a
         media hint on an otherwise http(s) form (e.g. a page resolved by an
         extractor)."""
         return form.scheme in self.schemes or bool(_media_hint(form))
 
     async def invoke(self, action: WoTAction, form: WoTForm, arguments: dict[str, Any]) -> Any:
         raise TypeError(
-            "MediaInvoker has no request/response surface; use frames() to "
+            "MediaBinding has no request/response surface; use frames() to "
             "consume or publish() to produce media."
         )
 
@@ -151,7 +153,7 @@ class MediaInvoker(_AuthBinding):
         # neutral auth plan; the backend maps it to its engine (URL userinfo for
         # a decoder, account login for the extractor). Absent declared security,
         # no plan is attached.
-        creds = await self._resolve_credentials(getattr(action, "thing_id", None))
+        creds = await self._resolve_credentials(getattr(action, "thing_id", None), form)
         if creds:
             plan = apply_media(creds)
             if plan.has_credentials:
@@ -178,7 +180,7 @@ class MediaInvoker(_AuthBinding):
         hint = _media_hint(form)
         backend = self._pick(url, hint)
         options = {**hint, "track": track}
-        creds = await self._resolve_credentials(getattr(action, "thing_id", None))
+        creds = await self._resolve_credentials(getattr(action, "thing_id", None), form)
         if creds:
             plan = apply_media(creds)
             if plan.has_credentials:

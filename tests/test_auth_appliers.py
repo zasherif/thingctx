@@ -2,7 +2,7 @@
 material, and per-transport appliers map that material onto HTTP and MQTT.
 
 The headline guarantee is reuse: the *same* credential, declared once on a
-Thing, drives both an HTTP request and an MQTT connection -- because nothing in
+Thing, drives both an HTTP request and an MQTT connection, because nothing in
 the auth layer is transport-shaped. All offline; the MQTT wiring is checked with
 a fake paho client.
 """
@@ -23,7 +23,7 @@ from thingctx.auth import (
     apply_http,
     apply_mqtt,
 )
-from thingctx.invokers import HttpInvoker, MqttInvoker
+from thingctx.bindings import HttpBinding, MqttBinding
 
 # --------------------------------------------------------------------------- #
 # apply_http: each Credential kind maps to the right HTTP slot
@@ -110,7 +110,7 @@ def test_apply_mqtt_ignores_http_only_kinds():
 
 
 # --------------------------------------------------------------------------- #
-# MqttInvoker wiring: neutral material configures paho before connect
+# MqttBinding wiring: neutral material configures paho before connect
 # --------------------------------------------------------------------------- #
 
 
@@ -137,31 +137,31 @@ def _td(scheme: dict) -> dict:
     }
 
 
-async def test_mqtt_invoker_basic_sets_username_password():
+async def test_mqtt_binding_basic_sets_username_password():
     thing = parse_thing(_td({"scheme": "basic"}))
-    inv = MqttInvoker(credentials={"urn:dev:x": "user:pass"}).with_security(thing)
+    inv = MqttBinding(credentials={"urn:dev:x": "user:pass"}).with_security(thing)
     client = _FakeClient()
     await inv._apply_auth(client, "urn:dev:x")
     assert client.user == ("user", "pass")
 
 
-async def test_mqtt_invoker_token_is_password():
+async def test_mqtt_binding_token_is_password():
     thing = parse_thing(_td({"scheme": "bearer"}))
-    inv = MqttInvoker(credentials={"urn:dev:x": "TOK"}).with_security(thing)
+    inv = MqttBinding(credentials={"urn:dev:x": "TOK"}).with_security(thing)
     client = _FakeClient()
     await inv._apply_auth(client, "urn:dev:x")
     assert client.user == ("", "TOK")
 
 
-async def test_mqtt_invoker_enhanced_auth_uses_v5_connect_properties():
+async def test_mqtt_binding_enhanced_auth_uses_v5_connect_properties():
     """Tier 2: EnhancedAuth (AIO SAT / EMQX SCRAM) flows through as neutral
-    material and is mapped onto an MQTT v5 CONNECT -- a v5 client plus the
+    material and is mapped onto an MQTT v5 CONNECT, a v5 client plus the
     AuthenticationMethod/Data properties. (Built offline; no broker.)"""
     import paho.mqtt.client as mqtt
 
     thing = parse_thing(_td({"scheme": "nosec"}))
     ea = EnhancedAuth(method="K8S-SAT", data=b"sat-token")
-    inv = MqttInvoker(credentials={"urn:dev:x": ea}).with_security(thing)
+    inv = MqttBinding(credentials={"urn:dev:x": ea}).with_security(thing)
 
     client, props = await inv._connect("urn:dev:x", "broker", 8883)
     assert client._protocol == mqtt.MQTTv5
@@ -170,9 +170,9 @@ async def test_mqtt_invoker_enhanced_auth_uses_v5_connect_properties():
     assert props.AuthenticationData == b"sat-token"
 
 
-async def test_mqtt_invoker_no_enhanced_auth_stays_v3_no_properties():
+async def test_mqtt_binding_no_enhanced_auth_stays_v3_no_properties():
     thing = parse_thing(_td({"scheme": "basic"}))
-    inv = MqttInvoker(credentials={"urn:dev:x": "u:p"}).with_security(thing)
+    inv = MqttBinding(credentials={"urn:dev:x": "u:p"}).with_security(thing)
     client, props = await inv._connect("urn:dev:x", "broker", 1883)
     import paho.mqtt.client as mqtt
 
@@ -180,12 +180,12 @@ async def test_mqtt_invoker_no_enhanced_auth_stays_v3_no_properties():
     assert props is None
 
 
-async def test_mqtt_invoker_mtls_calls_tls_set():
+async def test_mqtt_binding_mtls_calls_tls_set():
     # mTLS material flows through the layer via the direct/passthrough provider:
     # the credential is itself neutral ClientCertificate material.
     thing = parse_thing(_td({"scheme": "nosec"}))
     cert = ClientCertificate(certfile="c.pem", keyfile="k.pem", ca_certs="ca.pem")
-    inv = MqttInvoker(credentials={"urn:dev:x": cert}).with_security(thing)
+    inv = MqttBinding(credentials={"urn:dev:x": cert}).with_security(thing)
     client = _FakeClient()
     await inv._apply_auth(client, "urn:dev:x")
     assert client.tls == {"ca_certs": "ca.pem", "certfile": "c.pem", "keyfile": "k.pem"}
@@ -198,14 +198,14 @@ async def test_mqtt_invoker_mtls_calls_tls_set():
 
 async def test_same_basic_credential_drives_http_and_mqtt():
     """A `basic` Thing with one secret: HTTP turns it into an Authorization
-    header, MQTT into a username/password -- from the identical declaration."""
+    header, MQTT into a username/password, from the identical declaration."""
     thing = parse_thing(_td({"scheme": "basic"}))
 
-    http = HttpInvoker(credentials={"urn:dev:x": "user:pass"}).with_security(thing)
+    http = HttpBinding(credentials={"urn:dev:x": "user:pass"}).with_security(thing)
     headers, _params, _signers, _cert = await http._prepare("urn:dev:x")
     assert headers["Authorization"] == "Basic " + base64.b64encode(b"user:pass").decode()
 
-    mq = MqttInvoker(credentials={"urn:dev:x": "user:pass"}).with_security(thing)
+    mq = MqttBinding(credentials={"urn:dev:x": "user:pass"}).with_security(thing)
     client = _FakeClient()
     await mq._apply_auth(client, "urn:dev:x")
     assert client.user == ("user", "pass")
@@ -213,15 +213,15 @@ async def test_same_basic_credential_drives_http_and_mqtt():
 
 async def test_same_mtls_credential_drives_http_and_mqtt():
     """mTLS material is reused verbatim: HTTP sets the client cert, MQTT calls
-    tls_set -- same ClientCertificate, no transport-specific auth code."""
+    tls_set; same ClientCertificate, no transport-specific auth code."""
     thing = parse_thing(_td({"scheme": "nosec"}))
     cert = ClientCertificate(certfile="c.pem", keyfile="k.pem", ca_certs="ca.pem")
 
-    http = HttpInvoker(credentials={"urn:dev:x": cert}).with_security(thing)
+    http = HttpBinding(credentials={"urn:dev:x": cert}).with_security(thing)
     _h, _p, _s, http_cert = await http._prepare("urn:dev:x")
     assert http_cert == ("c.pem", "k.pem")
 
-    mq = MqttInvoker(credentials={"urn:dev:x": cert}).with_security(thing)
+    mq = MqttBinding(credentials={"urn:dev:x": cert}).with_security(thing)
     client = _FakeClient()
     await mq._apply_auth(client, "urn:dev:x")
     assert client.tls["certfile"] == "c.pem"

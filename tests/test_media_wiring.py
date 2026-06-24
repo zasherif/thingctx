@@ -10,9 +10,9 @@ from collections.abc import Iterator
 
 import numpy as np
 
+from thingctx.bindings import HttpBinding, select_binding
+from thingctx.bindings.builtin.media import Frame, MediaBinding, is_media_form
 from thingctx.contrib.llm import LLMHost
-from thingctx.invokers import HttpInvoker, select_invoker
-from thingctx.invokers.media import Frame, MediaInvoker, is_media_form
 from thingctx.runtime import ThingClient
 from thingctx.thing import WoTForm
 
@@ -50,7 +50,7 @@ def _media_td(href: str, hint: dict | None = None) -> dict:
 def _client(href: str, hint: dict | None = None) -> ThingClient:
     return ThingClient(
         tds=[_media_td(href, hint)],
-        invokers=[HttpInvoker(), MediaInvoker(backends=[_FakeBackend()])],
+        bindings=[HttpBinding(), MediaBinding(backends=[_FakeBackend()])],
     )
 
 
@@ -64,15 +64,15 @@ def test_is_media_form():
 
 
 def test_media_wins_over_http_for_hinted_form():
-    http = HttpInvoker()
-    media = MediaInvoker(backends=[_FakeBackend()])
-    # http(s) href + media hint -> media invoker, not http.
+    http = HttpBinding()
+    media = MediaBinding(backends=[_FakeBackend()])
+    # http(s) href + media hint -> media binding, not http.
     hinted = WoTForm(href="https://x/y", raw={"x-thingctx-media": {"k": 1}})
-    assert select_invoker([http, media], hinted) is media
+    assert select_binding([http, media], hinted) is media
     # rtsp scheme -> media even though http is listed first.
-    assert select_invoker([http, media], WoTForm(href="rtsp://x/y")) is media
+    assert select_binding([http, media], WoTForm(href="rtsp://x/y")) is media
     # plain http(s) -> http, untouched.
-    assert select_invoker([http, media], WoTForm(href="https://x/y")) is http
+    assert select_binding([http, media], WoTForm(href="https://x/y")) is http
 
 
 # ThingClient frames() and media/invoke split
@@ -183,7 +183,7 @@ def test_see_video_sends_a_native_video_url():
 
 
 def test_sample_frames_spaces_by_pts():
-    from thingctx.invokers.media import sample_frames
+    from thingctx.bindings.builtin.media import sample_frames
 
     async def gen():
         for i in range(20):
@@ -225,7 +225,7 @@ def test_frames_with_url_argument_routes_verbatim_to_backend():
         },
     }
     client = ThingClient(
-        tds=[td], invokers=[HttpInvoker(), MediaInvoker(backends=[_RecordingBackend()])]
+        tds=[td], bindings=[HttpBinding(), MediaBinding(backends=[_RecordingBackend()])]
     )
     target = "https://vimeo.com/123?h=abc"
 

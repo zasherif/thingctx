@@ -34,7 +34,7 @@ from pathlib import Path
 
 import numpy as np
 
-from thingctx.invokers.media import Frame, MediaInvoker
+from thingctx.bindings.builtin.media import Frame, MediaBinding
 from thingctx.runtime import ThingClient
 
 WIDTH, HEIGHT, FPS = 320, 240, 25
@@ -96,7 +96,7 @@ def _view_td(href: str) -> dict:
 
 async def _part_a_file() -> None:
     out = Path(tempfile.mkdtemp()) / "clip.mp4"
-    client = ThingClient(tds=[_publish_td(str(out)), _view_td(str(out))], invokers=[MediaInvoker()])
+    client = ThingClient(tds=[_publish_td(str(out)), _view_td(str(out))], bindings=[MediaBinding()])
     try:
         print(f"A. publishing 60 frames to {out.name}")
         await client.publish("studio.broadcast", _source(60))
@@ -133,7 +133,7 @@ async def _part_b_rtsp() -> None:
     server = subprocess.Popen(
         ["mediamtx", str(cfg)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )
-    client = ThingClient(tds=[_publish_td(RTSP_URL), _view_td(RTSP_URL)], invokers=[MediaInvoker()])
+    client = ThingClient(tds=[_publish_td(RTSP_URL), _view_td(RTSP_URL)], bindings=[MediaBinding()])
     try:
         if not _wait_port("127.0.0.1", 8554):
             print("B. RTSP server did not come up on :8554")

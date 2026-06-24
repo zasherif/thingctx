@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 
-from thingctx.invokers.media.frame import Frame
+from thingctx.bindings.builtin.media.frame import Frame
 
 
 async def sample_frames(

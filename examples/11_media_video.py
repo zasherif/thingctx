@@ -25,8 +25,8 @@ import asyncio
 import os
 
 import thingctx
-from thingctx import HttpInvoker
-from thingctx.invokers.media import MediaInvoker
+from thingctx import HttpBinding
+from thingctx.bindings.builtin.media import MediaBinding
 
 # A video understanding *service*: the clip is a parameter, not a fixed source.
 # `watch` takes a `url` argument (uriVariables) substituted verbatim into the form
@@ -68,7 +68,7 @@ async def main() -> None:
         )
         return
 
-    host = thingctx.from_td(VIDEO_TD, model=model, invokers=[HttpInvoker(), MediaInvoker()])
+    host = thingctx.from_td(VIDEO_TD, model=model, bindings=[HttpBinding(), MediaBinding()])
     # Parameterized: the clip URL is an argument, resolved through the TD's form
     # ("{+url}" is substituted verbatim); the same TD works for any video.
     url, _ = host.client.media_form("understand.watch").fill({"url": CLIP_URL})

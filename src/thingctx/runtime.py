@@ -1,7 +1,7 @@
 """ThingClient: list and invoke a Thing's actions, read/write properties,
 subscribe to events. No LLM.
 
-    client = ThingClient(tds=[td], invokers=[HttpInvoker()])
+    client = ThingClient(tds=[td], bindings=[HttpBinding()])
     client.list_actions()
     await client.invoke("pump.set_speed", {"rpm": 1200})
 """
@@ -11,8 +11,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from thingctx.invokers import HttpInvoker, Invoker, LocalInvoker, select_invoker
-from thingctx.invokers.media import is_media_form
+from thingctx.bindings import BindingRegistry, ProtocolBinding, default_bindings
+from thingctx.bindings.builtin.media import is_media_form
 from thingctx.thing import (
     WoTAction,
     WoTThing,
@@ -34,16 +34,16 @@ class ThingClient:
     agnostic; no LLM."""
 
     @classmethod
-    def from_registry(cls, registry, *, invokers=None, **kwargs) -> ThingClient:
+    def from_registry(cls, registry, *, bindings=None, **kwargs) -> ThingClient:
         """Build a client over every TD a registry yields. `registry` is
         anything with fetch() -> list[dict] (see thingctx.registry)."""
-        return cls(tds=registry.fetch(), invokers=invokers, **kwargs)
+        return cls(tds=registry.fetch(), bindings=bindings, **kwargs)
 
     def __init__(
         self,
         *,
         tds: list[dict[str, Any]],
-        invokers: list[Invoker] | None = None,
+        bindings: BindingRegistry | list[ProtocolBinding] | None = None,
         only_idempotent: bool = False,
         validate: bool = False,
         approve: Approver | None = None,
@@ -59,11 +59,18 @@ class ThingClient:
         self._approve = approve
         self._approve_when: ApprovePolicy = approve_when
         self._things: list[WoTThing] = [parse_thing(td, validate=validate) for td in tds]
-        # Default to HTTP + local so the documented quickstart (consume a TD,
-        # then invoke) routes without manual wiring; matches from_url. Pass
-        # invokers=[] explicitly for a client that registers none, or add
-        # MQTT/others as needed.
-        self._invokers = list(invokers) if invokers is not None else [HttpInvoker(), LocalInvoker()]
+        # Bindings resolve a form to a transport. ``bindings`` is a
+        # BindingRegistry or a plain list; an explicitly supplied binding
+        # shadows a built-in for its scheme. When none is given, default to
+        # http + local so the documented quickstart routes without wiring; pass
+        # an empty list for a client that registers none.
+        if isinstance(bindings, BindingRegistry):
+            self._registry = bindings
+        elif bindings is not None:
+            self._registry = BindingRegistry(list(bindings))
+        else:
+            self._registry = BindingRegistry(default_bindings())
+        self._bindings = self._registry.bindings
         self._tool_specs, self._route = actions_to_tools(
             self._things,
             only_idempotent=only_idempotent,
@@ -79,19 +86,19 @@ class ThingClient:
                 self._props[_tool_name(thing.id, p.name)] = p
             for e in thing.events.values():
                 self._events[_tool_name(thing.id, e.name)] = e
-        # Bind the TDs' declared security to any invoker that honors it, so
+        # Bind the TDs' declared security to any binding that honors it, so
         # requests carry the right auth without the adopter wiring it. A
-        # fleet-aware invoker (with_things) authenticates each call as its
+        # fleet-aware binding (with_things) authenticates each call as its
         # owning Thing; otherwise fall back to the first Thing's schemes.
-        for inv in self._invokers:
+        for inv in self._bindings:
             if hasattr(inv, "with_things"):
                 inv.with_things(self._things)
             elif hasattr(inv, "with_security") and self._things:
                 inv.with_security(self._things[0])
 
-        # Preferred transport order = the order invokers were given.
+        # Preferred transport order = the order bindings were given.
         self._prefer = tuple(
-            s for inv in self._invokers for s in (getattr(inv, "schemes", None) or (inv.scheme,))
+            s for inv in self._bindings for s in (getattr(inv, "schemes", None) or (inv.scheme,))
         )
 
         # Media affordances are continuous streams, not request/response: they
@@ -109,9 +116,9 @@ class ThingClient:
             ]
 
     async def aclose(self) -> None:
-        """Release any pooled transport resources (e.g. an invoker's reused
+        """Release any pooled transport resources (e.g. an binding's reused
         HTTP client). Safe to call more than once."""
-        for inv in self._invokers:
+        for inv in self._bindings:
             closer = getattr(inv, "aclose", None)
             if closer is not None:
                 await closer()
@@ -172,11 +179,11 @@ class ThingClient:
         form = action.primary_form(prefer=self._prefer)
         if form is None:
             return {"error": f"action {tool_name} has no form (no transport)"}
-        invoker = select_invoker(self._invokers, form)
-        if invoker is None:
+        binding = self._registry.resolve(form)
+        if binding is None:
             return {
                 "error": (
-                    f"no invoker for transport {form.scheme!r} (action {tool_name}); register one"
+                    f"no binding for transport {form.scheme!r} (action {tool_name}); register one"
                 ),
                 "transport": form.scheme,
             }
@@ -185,7 +192,7 @@ class ThingClient:
 
         href, rest = form.fill(arguments or {})
         filled = dataclasses.replace(form, href=href) if href != form.href else form
-        return await invoker.invoke(action, filled, rest)
+        return await binding.invoke(action, filled, rest)
 
     def list_properties(self) -> list[str]:
         return list(self._props)
@@ -212,10 +219,10 @@ class ThingClient:
         if prop is None:
             return {"error": f"unknown property: {name}"}
         form = prop.primary_form(prefer=self._prefer)
-        invoker = select_invoker(self._invokers, form) if form else None
-        if invoker is None or not hasattr(invoker, "read"):
+        binding = self._registry.resolve(form) if form else None
+        if binding is None or not hasattr(binding, "read"):
             return {"error": f"no readable transport for property {name}"}
-        return await invoker.read(prop, form)
+        return await binding.read(prop, form)
 
     async def write_property(self, name: str, value: Any) -> Any:
         """Write a property's value. Read-only properties are rejected."""
@@ -230,10 +237,10 @@ class ThingClient:
         if blocked is not None:
             return blocked
         form = prop.primary_form(prefer=self._prefer)
-        invoker = select_invoker(self._invokers, form) if form else None
-        if invoker is None or not hasattr(invoker, "write"):
+        binding = self._registry.resolve(form) if form else None
+        if binding is None or not hasattr(binding, "write"):
             return {"error": f"no writable transport for property {name}"}
-        return await invoker.write(prop, form, value)
+        return await binding.write(prop, form, value)
 
     async def subscribe(self, name: str):
         """Subscribe to an event or observable property. Returns an async
@@ -246,11 +253,11 @@ class ThingClient:
         if target is None:
             return _empty_aiter(f"unknown event/property: {name}")
         form = target.primary_form(prefer=self._prefer)
-        invoker = select_invoker(self._invokers, form) if form else None
-        if invoker is None or not hasattr(invoker, "subscribe"):
+        binding = self._registry.resolve(form) if form else None
+        if binding is None or not hasattr(binding, "subscribe"):
             return _empty_aiter(f"no subscribable transport for {name}")
         bare = target.name
-        return await invoker.subscribe(bare, form)
+        return await binding.subscribe(bare, form)
 
     async def frames(
         self,
@@ -269,14 +276,14 @@ class ThingClient:
         if action is None:
             return _empty_aiter(f"unknown media affordance: {name}")
         form = next((f for f in action.forms if is_media_form(f)), None)
-        invoker = select_invoker(self._invokers, form) if form else None
-        if invoker is None or not hasattr(invoker, "frames"):
-            return _empty_aiter(f"no media transport for {name}; register MediaInvoker")
+        binding = self._registry.resolve(form) if form else None
+        if binding is None or not hasattr(binding, "frames"):
+            return _empty_aiter(f"no media transport for {name}; register MediaBinding")
         import dataclasses
 
         href, rest = form.fill(arguments or {})
         filled = dataclasses.replace(form, href=href) if href != form.href else form
-        return invoker.frames(action, filled, rest, track=track)
+        return binding.frames(action, filled, rest, track=track)
 
     async def publish(
         self,
@@ -296,14 +303,14 @@ class ThingClient:
         if action is None:
             raise KeyError(f"unknown media affordance: {name}")
         form = next((f for f in action.forms if is_media_form(f)), None)
-        invoker = select_invoker(self._invokers, form) if form else None
-        if invoker is None or not hasattr(invoker, "publish"):
-            raise RuntimeError(f"no media transport for {name}; register MediaInvoker")
+        binding = self._registry.resolve(form) if form else None
+        if binding is None or not hasattr(binding, "publish"):
+            raise RuntimeError(f"no media transport for {name}; register MediaBinding")
         import dataclasses
 
         href, rest = form.fill(arguments or {})
         filled = dataclasses.replace(form, href=href) if href != form.href else form
-        await invoker.publish(action, filled, frames, rest, track=track)
+        await binding.publish(action, filled, frames, rest, track=track)
 
     async def verify(self, thing_id: str | None = None) -> list[VerifyReport]:
         """Ground each Thing's TD against the live endpoint: read every

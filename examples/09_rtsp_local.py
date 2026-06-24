@@ -4,7 +4,7 @@ the auth layer, never baked into the TD.
 
 This is the shape of a real IP camera. The TD declares ``basic`` security; the
 secret is handed to the client at runtime (keyed by the Thing's slug) and the
-MediaInvoker resolves it into the RTSP URL userinfo via the transport-neutral
+MediaBinding resolves it into the RTSP URL userinfo via the transport-neutral
 auth layer (the same ``resolve_credentials`` primitive HTTP and MQTT use). The
 TD itself carries no secret.
 
@@ -29,8 +29,8 @@ import tempfile
 import time
 from pathlib import Path
 
-from thingctx.invokers import HttpInvoker
-from thingctx.invokers.media import MediaInvoker
+from thingctx.bindings import HttpBinding
+from thingctx.bindings.builtin.media import MediaBinding
 from thingctx.runtime import ThingClient
 
 RTSP_URL = "rtsp://127.0.0.1:8554/cam"
@@ -150,7 +150,7 @@ async def main() -> None:
         # Wrong credentials are refused; proof the stream really is protected.
         wrong = ThingClient(
             tds=[CAMERA_TD],
-            invokers=[MediaInvoker(credentials={"local": (USERNAME, "not-the-password")})],
+            bindings=[MediaBinding(credentials={"local": (USERNAME, "not-the-password")})],
         )
         try:
             await _first_frames(wrong, "local.watch", 1, timeout=10.0)
@@ -162,10 +162,10 @@ async def main() -> None:
             await wrong.aclose()
 
         # Correct credentials, supplied to the client (never in the TD): the
-        # MediaInvoker resolves `basic` -> RTSP userinfo and the read succeeds.
+        # MediaBinding resolves `basic` -> RTSP userinfo and the read succeeds.
         client = ThingClient(
             tds=[CAMERA_TD],
-            invokers=[HttpInvoker(), MediaInvoker(credentials={"local": (USERNAME, PASSWORD)})],
+            bindings=[HttpBinding(), MediaBinding(credentials={"local": (USERNAME, PASSWORD)})],
         )
         print(f"  correct login   -> consuming {client.list_media()[0]} ...\n")
         frames = await _first_frames(client, "local.watch", 10)

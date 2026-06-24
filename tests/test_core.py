@@ -1,11 +1,11 @@
-"""The core: parse a TD, invoke/read/write/subscribe over a local invoker."""
+"""The core: parse a TD, invoke/read/write/subscribe over a local binding."""
 
 from __future__ import annotations
 
 import pytest
 
 import thingctx
-from thingctx import LocalInvoker, ThingClient
+from thingctx import LocalBinding, ThingClient
 
 TD = {
     "@context": "https://www.w3.org/2022/wot/td/v1.1",
@@ -29,7 +29,7 @@ TD = {
 class Pump:
     def __init__(self):
         self._rpm = 0
-        self.target_rpm = 0  # plain attribute (LocalInvoker setattr path)
+        self.target_rpm = 0  # plain attribute (LocalBinding setattr path)
 
     def rpm(self):
         return self._rpm
@@ -42,7 +42,7 @@ class Pump:
 @pytest.fixture
 def client():
     p = Pump()
-    return ThingClient(tds=[TD], invokers=[LocalInvoker(p)]), p
+    return ThingClient(tds=[TD], bindings=[LocalBinding(p)]), p
 
 
 def test_tools_are_listed(client):

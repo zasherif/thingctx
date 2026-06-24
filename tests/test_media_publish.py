@@ -11,8 +11,8 @@ import pytest
 av = pytest.importorskip("av")
 np = pytest.importorskip("numpy")
 
-from thingctx.invokers.media import Frame, MediaInvoker  # noqa: E402
-from thingctx.invokers.media.backends import PyAVBackend  # noqa: E402
+from thingctx.bindings.builtin.media import Frame, MediaBinding  # noqa: E402
+from thingctx.bindings.builtin.media.backends import PyAVBackend  # noqa: E402
 from thingctx.thing import WoTAction, WoTForm  # noqa: E402
 
 _ACTION = WoTAction(
@@ -43,7 +43,7 @@ async def _source(n: int):
 def test_publish_then_consume_file_roundtrip(tmp_path):
     out = tmp_path / "clip.mp4"
     form = WoTForm(href=str(out), raw={"x-thingctx-media": {"fps": 25}})
-    inv = MediaInvoker(backends=[PyAVBackend()], backpressure="all", max_queue=4)
+    inv = MediaBinding(backends=[PyAVBackend()], backpressure="all", max_queue=4)
 
     asyncio.run(inv.publish(_ACTION, form, _source(30)))
 

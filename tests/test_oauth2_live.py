@@ -18,7 +18,7 @@ from urllib.parse import parse_qs
 
 import pytest
 
-from thingctx import HttpInvoker, parse_thing
+from thingctx import HttpBinding, parse_thing
 
 CLIENT_ID = "svc-agent"
 CLIENT_SECRET = "top-secret"
@@ -105,7 +105,7 @@ def _action_form(base):
 
 async def test_real_oauth2_flow_uses_basic_and_attaches_bearer(server):
     base, seen = server
-    inv = HttpInvoker(
+    inv = HttpBinding(
         credentials={"urn:dev:svc": {"client_id": CLIENT_ID, "client_secret": CLIENT_SECRET}}
     ).with_security(_thing(base))
     action, form = _action_form(base)
@@ -120,7 +120,7 @@ async def test_real_oauth2_flow_uses_basic_and_attaches_bearer(server):
 
 async def test_real_token_caching_one_fetch(server):
     base, seen = server
-    inv = HttpInvoker(
+    inv = HttpBinding(
         credentials={"urn:dev:svc": {"client_id": CLIENT_ID, "client_secret": CLIENT_SECRET}}
     ).with_security(_thing(base))
     action, form = _action_form(base)
@@ -135,7 +135,7 @@ async def test_real_bad_secret_is_refused(server):
     base, seen = server
     import httpx
 
-    inv = HttpInvoker(
+    inv = HttpBinding(
         credentials={"urn:dev:svc": {"client_id": CLIENT_ID, "client_secret": "wrong"}}
     ).with_security(_thing(base))
     action, form = _action_form(base)
@@ -162,7 +162,7 @@ async def test_non_https_token_endpoint_is_refused_by_default():
             },
         }
     )
-    inv = HttpInvoker(
+    inv = HttpBinding(
         credentials={"urn:dev:svc": {"client_id": "a", "client_secret": "b"}}
     ).with_security(thing)
     action = SimpleNamespace(thing_id="urn:dev:svc", idempotent=False)

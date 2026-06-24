@@ -27,7 +27,7 @@ import asyncio
 from _pump import DEVICE_TOKEN, pick_llm_model, start_device
 
 import thingctx
-from thingctx import HttpInvoker, LocalInvoker, MqttInvoker, ThingClient
+from thingctx import HttpBinding, LocalBinding, MqttBinding, ThingClient
 
 
 def safety_policy(deny: set[str]):
@@ -45,11 +45,11 @@ def safety_policy(deny: set[str]):
     return approve
 
 
-def _invokers(pump):
+def _bindings(pump):
     return [
-        LocalInvoker(pump),
-        HttpInvoker(credentials={"bearer_sc": DEVICE_TOKEN}),
-        MqttInvoker(timeout=5),
+        LocalBinding(pump),
+        HttpBinding(credentials={"bearer_sc": DEVICE_TOKEN}),
+        MqttBinding(timeout=5),
     ]
 
 
@@ -60,7 +60,7 @@ async def main() -> None:
     approve = safety_policy(deny={"estop"})
     try:
         client = ThingClient(
-            tds=[td], invokers=_invokers(pump), approve=approve, approve_when="destructive"
+            tds=[td], bindings=_bindings(pump), approve=approve, approve_when="destructive"
         )
 
         print("== Part A: the gate (no LLM) ==")
@@ -89,7 +89,7 @@ async def main() -> None:
             host = thingctx.from_td(
                 td,
                 model=model,
-                invokers=_invokers(pump),
+                bindings=_bindings(pump),
                 approve=approve,
                 approve_when="destructive",
                 resilient=True,

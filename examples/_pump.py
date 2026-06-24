@@ -22,7 +22,7 @@ class PumpDevice:
         self.stopped = False
         self.coolant_open = False
         self._sensors = {"temp-1": 72, "vibration": 3}
-        self._listeners: list = []  # local invokers subscribed for pushes
+        self._listeners: list = []  # local bindings subscribed for pushes
         self._sse_queues: list = []  # HTTP/SSE client queues (over the wire)
 
     # actions
@@ -79,8 +79,8 @@ class PumpDevice:
         return {"ok": True, "target_rpm": value}
 
     # telemetry: the device pushes events to its subscribers
-    def attach(self, invoker) -> None:
-        self._listeners.append(invoker)
+    def attach(self, binding) -> None:
+        self._listeners.append(binding)
 
     def add_sse_queue(self, q) -> None:
         self._sse_queues.append(q)
@@ -189,7 +189,7 @@ def start_device():
     """Bring the external device fully online: a PumpDevice, its HTTP
     server (bearer-secured, SSE stream), AND a real MQTT broker bridging
     the set_coolant topic. Returns ``(pump, td, stop)``, hand ``pump``
-    to a LocalInvoker, ``td`` to thingctx, and call ``stop()`` when done.
+    to a LocalBinding, ``td`` to thingctx, and call ``stop()`` when done.
 
     The 'external world' the demos consume; a demo body only contains
     what you write against thingctx."""
@@ -211,7 +211,7 @@ def start_mqtt_broker(device: PumpDevice):
     """Start a real mosquitto broker + a device-side subscriber that
     bridges the `pump/set_coolant` topic to the device. Returns
     (host, port, stop), call stop() when done. No stand-in: this is an
-    actual MQTT broker the MqttInvoker publishes to over the wire.
+    actual MQTT broker the MqttBinding publishes to over the wire.
 
     Skips (returns None) if mosquitto or paho aren't available."""
     import shutil

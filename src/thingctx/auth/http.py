@@ -1,9 +1,9 @@
 """HTTP applier: map neutral credential material onto an HTTP request.
 
 This is the only place that knows how each :class:`Credential` kind attaches to
-HTTP -- bearer/basic to ``Authorization``, apikey to a header or query param,
+HTTP: bearer/basic to ``Authorization``, apikey to a header or query param,
 mTLS to the client ``cert``, a ``SignatureCredential`` to a request signer chosen
-by its ``algorithm``, a custom ``RequestSigner`` to a signer. The invoker just
+by its ``algorithm``, a custom ``RequestSigner`` to a signer. The binding just
 executes the returned plan; it holds no auth logic. Kinds that have no HTTP
 meaning (``EnhancedAuth``) are ignored.
 """

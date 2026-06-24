@@ -3,7 +3,7 @@
 The continuous-binary plane (audio/video), distinct from the event /
 subscription plane (MQTT, SSE, Pub/Sub) which carries discrete structured
 messages. The shared data type (:class:`Frame`) and the engine protocol
-(:class:`MediaBackend`) live here so backends never import the invoker.
+(:class:`MediaBackend`) live here so backends never import the binding.
 """
 
 from __future__ import annotations

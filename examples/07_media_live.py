@@ -2,7 +2,7 @@
 
 A media affordance is the continuous audio/video face of a Thing. Its form points
 at a stream by reference (there is no W3C binding for RTSP/WebRTC, so the form
-carries an ``x-thingctx-media`` hint), and thingctx routes it to the MediaInvoker
+carries an ``x-thingctx-media`` hint), and thingctx routes it to the MediaBinding
 instead of fetching it. Media is consumed with ``client.frames()``; it is not a
 request/response action, so it never appears in ``list_actions()`` and cannot be
 ``invoke()``-d. The same surface serves both tracks (``track="video"|"audio"``).
@@ -38,8 +38,8 @@ from __future__ import annotations
 import asyncio
 import os
 
-from thingctx.invokers import HttpInvoker
-from thingctx.invokers.media import MediaInvoker
+from thingctx.bindings import HttpBinding
+from thingctx.bindings.builtin.media import MediaBinding
 from thingctx.runtime import ThingClient
 
 SAMPLE_MP4 = "https://media.w3.org/2010/05/sintel/trailer.mp4"
@@ -47,7 +47,7 @@ SAMPLE_MP4 = "https://media.w3.org/2010/05/sintel/trailer.mp4"
 VIDEO_URL = os.environ.get("THINGCTX_VIDEO", "https://www.youtube.com/watch?v=aqz-KE-bpKQ")
 
 # A direct stream: the href IS the media (an http(s) mp4), marked for the media
-# plane so it is decoded, not fetched by HttpInvoker.
+# plane so it is decoded, not fetched by HttpBinding.
 SAMPLE_TD = {
     "@context": "https://www.w3.org/2022/wot/td/v1.1",
     "id": "urn:thingctx:cam:sample",
@@ -89,7 +89,7 @@ async def _take(
 
 
 async def main() -> None:
-    client = ThingClient(tds=[SAMPLE_TD, PAGES_TD], invokers=[HttpInvoker(), MediaInvoker()])
+    client = ThingClient(tds=[SAMPLE_TD, PAGES_TD], bindings=[HttpBinding(), MediaBinding()])
 
     print("invoke tools (list_actions):", [t["function"]["name"] for t in client.list_actions()])
     print("media affordances (list_media):", client.list_media())
@@ -172,7 +172,7 @@ async def _run_authenticated() -> None:
         td["security"] = "login"
         creds = {"private": (user, pw)}
 
-    client = ThingClient(tds=[td], invokers=[HttpInvoker(), MediaInvoker(credentials=creds)])
+    client = ThingClient(tds=[td], bindings=[HttpBinding(), MediaBinding(credentials=creds)])
     print(f"\n[private.watch] authenticated source (url={url}):")
     try:
         frames = await _take(client, "private.watch", {"url": url}, track="video", n=3)

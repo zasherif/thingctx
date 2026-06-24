@@ -20,8 +20,8 @@ import asyncio
 from _pump import pick_vlm_model
 
 import thingctx
-from thingctx import HttpInvoker
-from thingctx.invokers.media import MediaInvoker
+from thingctx import HttpBinding
+from thingctx.bindings.builtin.media import MediaBinding
 
 # A camera described as a TD: its "watch" form points at a stream by reference
 # (x-thingctx-media), so thingctx routes it to the media plane, not HTTP. A camera
@@ -51,8 +51,8 @@ async def main() -> None:
         print("No vision model reachable. Pull a small one: ollama pull qwen3-vl:2b")
         return
 
-    # Same as 03: a TD + invokers + model -> a host. Media just adds MediaInvoker.
-    host = thingctx.from_td(CAMERA_TD, model=model, invokers=[HttpInvoker(), MediaInvoker()])
+    # Same as 03: a TD + bindings + model -> a host. Media just adds MediaBinding.
+    host = thingctx.from_td(CAMERA_TD, model=model, bindings=[HttpBinding(), MediaBinding()])
     print(f"model: {model}\n")
 
     # Grab a frame a few seconds in (the first frames are a black fade-in).

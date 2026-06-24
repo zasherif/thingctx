@@ -1,5 +1,5 @@
 """Media auth tests: the applier's credential to engine mapping, and end to end
-resolution of an owning Thing's declared security through MediaInvoker. All
+resolution of an owning Thing's declared security through MediaBinding. All
 offline (fake backend, no network, no codecs)."""
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from thingctx.auth import (
     redact_url,
     ytdlp_auth_options,
 )
-from thingctx.invokers.media import Frame, MediaError, MediaInvoker
+from thingctx.bindings.builtin.media import Frame, MediaBinding, MediaError
 from thingctx.runtime import ThingClient
 
 
@@ -94,7 +94,7 @@ def test_libav_log_records_are_redacted():
     # URL scrubbed, even if the host app raises the log level.
     import logging
 
-    from thingctx.invokers.media.backends import _install_libav_redaction
+    from thingctx.bindings.builtin.media.backends import _install_libav_redaction
 
     _install_libav_redaction()
     seen: list[str] = []
@@ -152,8 +152,8 @@ def test_media_errors_redact_credentials_end_to_end():
 
     client = ThingClient(
         tds=[_secured_td("rtsp://cam/stream")],
-        invokers=[
-            MediaInvoker(backends=[_BoomBackend()], credentials={"cam1": ("alice", "s3cr3t")})
+        bindings=[
+            MediaBinding(backends=[_BoomBackend()], credentials={"cam1": ("alice", "s3cr3t")})
         ],
     )
 
@@ -219,7 +219,7 @@ def test_basic_security_resolves_into_options_auth_plan():
     backend = _RecordingBackend()
     client = ThingClient(
         tds=[_secured_td("rtsp://cam/stream")],
-        invokers=[MediaInvoker(backends=[backend], credentials={"cam1": ("alice", "s3cr3t")})],
+        bindings=[MediaBinding(backends=[backend], credentials={"cam1": ("alice", "s3cr3t")})],
     )
     _drain(client, "cam1.watch")
     plan = backend.seen["options"]["auth"]
@@ -234,7 +234,7 @@ def test_declared_basic_without_secret_attaches_no_plan():
     backend = _RecordingBackend()
     client = ThingClient(
         tds=[_secured_td("rtsp://cam/stream")],
-        invokers=[MediaInvoker(backends=[backend])],  # no credentials supplied
+        bindings=[MediaBinding(backends=[backend])],  # no credentials supplied
     )
     _drain(client, "cam1.watch")
     assert "auth" not in backend.seen["options"]
@@ -248,7 +248,7 @@ def test_no_declared_security_attaches_no_plan():
         "title": "cam",
         "actions": {"watch": {"forms": [{"href": "rtsp://cam/stream"}]}},
     }
-    client = ThingClient(tds=[td], invokers=[MediaInvoker(backends=[backend])])
+    client = ThingClient(tds=[td], bindings=[MediaBinding(backends=[backend])])
     _drain(client, "cam1.watch")
     assert "auth" not in backend.seen["options"]
 
@@ -277,7 +277,7 @@ def test_extractor_builds_ytdlp_opts_from_plan_and_cookie_hint(monkeypatch):
     fake.YoutubeDL = _FakeYDL
     monkeypatch.setitem(sys.modules, "yt_dlp", fake)
 
-    from thingctx.invokers.media.backends import ExtractorBackend
+    from thingctx.bindings.builtin.media.backends import ExtractorBackend
 
     resolved = ExtractorBackend()._resolve(
         "https://site/v",
@@ -308,7 +308,7 @@ def test_extractor_login_for_parameterized_page_source():
     }
     client = ThingClient(
         tds=[td],
-        invokers=[MediaInvoker(backends=[backend], credentials={"pages": ("me", "pw")})],
+        bindings=[MediaBinding(backends=[backend], credentials={"pages": ("me", "pw")})],
     )
     _drain(client, "pages.watch", {"url": "https://www.youtube.com/watch?v=private"})
     plan = backend.seen["options"]["auth"]

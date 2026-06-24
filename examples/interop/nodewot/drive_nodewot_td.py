@@ -17,7 +17,7 @@ import os
 
 import httpx
 
-from thingctx.invokers import HttpInvoker
+from thingctx.bindings import HttpBinding
 from thingctx.runtime import ThingClient
 
 TD_URL = os.environ.get("NODEWOT_TD_URL", "http://localhost:8080/counter")
@@ -28,13 +28,13 @@ async def main() -> None:
         td = (await http.get(TD_URL)).json()
     print(f"counter TD: id={td.get('id')}  title={td.get('title')}")
 
-    client = ThingClient(tds=[td], invokers=[HttpInvoker()])
+    client = ThingClient(tds=[td], bindings=[HttpBinding()])
     print("actions exposed as tools:", [t["function"]["name"] for t in client.list_actions()])
     print("properties:", client.list_properties())
 
     # Address by the Thing's slug, which thingctx derives from the TD id.
     # node-wot defaults to a random urn:uuid id, so derive it rather than
-    # hard-coding -- the demo then works for any producer.
+    # hard-coding; the demo then works for any producer.
     slug = client.list_properties()[0].split(".", 1)[0]
 
     before = await client.read_property(f"{slug}.count")

@@ -1,4 +1,4 @@
-"""HttpInvoker reliability + chaos.
+"""HttpBinding reliability + chaos.
 
 Two layers of testing here:
 
@@ -20,7 +20,7 @@ import httpx
 import pytest
 
 import thingctx.reliability as reliability
-from thingctx import HttpInvoker, TransportError
+from thingctx import HttpBinding, TransportError
 from thingctx.reliability import RetryPolicy, send_with_retry
 
 
@@ -74,7 +74,7 @@ async def test_retries_then_succeeds(routed):
         httpx.Response(503),
         httpx.Response(200, json={"ok": True}),
     ]
-    inv = HttpInvoker(backoff=0)
+    inv = HttpBinding(backoff=0)
     action, form = _af("PUT")
 
     result = await inv.invoke(action, form, {})
@@ -86,7 +86,7 @@ async def test_retries_then_succeeds(routed):
 
 async def test_transient_failures_exhaust_to_transport_error(routed):
     routed["responses"] = [httpx.Response(503)] * 3
-    inv = HttpInvoker(backoff=0)
+    inv = HttpBinding(backoff=0)
     action, form = _af("PUT")
 
     with pytest.raises(TransportError) as ei:
@@ -100,7 +100,7 @@ async def test_transient_failures_exhaust_to_transport_error(routed):
 
 async def test_non_retryable_4xx_raises_immediately(routed):
     routed["responses"] = [httpx.Response(404, text="nope")]
-    inv = HttpInvoker(backoff=0)
+    inv = HttpBinding(backoff=0)
     action, form = _af("GET")
 
     with pytest.raises(TransportError) as ei:
@@ -117,7 +117,7 @@ async def test_connection_error_is_retried_then_normalized(routed):
         raise httpx.ConnectError("refused")
 
     routed["responses"] = [boom, boom, boom]
-    inv = HttpInvoker(backoff=0)
+    inv = HttpBinding(backoff=0)
     action, form = _af("GET")
 
     with pytest.raises(TransportError) as ei:
@@ -131,7 +131,7 @@ async def test_connection_error_is_retried_then_normalized(routed):
 
 async def test_client_is_pooled_across_calls(routed):
     routed["responses"] = [httpx.Response(200, json={"n": 1}), httpx.Response(200, json={"n": 2})]
-    inv = HttpInvoker(backoff=0)
+    inv = HttpBinding(backoff=0)
     action, form = _af("GET")
 
     await inv.invoke(action, form, {})
@@ -143,7 +143,7 @@ async def test_client_is_pooled_across_calls(routed):
 
 async def test_context_manager_closes(routed):
     routed["responses"] = [httpx.Response(200, json={"ok": True})]
-    async with HttpInvoker(backoff=0) as inv:
+    async with HttpBinding(backoff=0) as inv:
         action, form = _af("GET")
         await inv.invoke(action, form, {})
         client = inv._client
@@ -156,7 +156,7 @@ async def test_context_manager_closes(routed):
 
 async def test_post_is_not_retried_by_default(routed):
     routed["responses"] = [httpx.Response(503), httpx.Response(200, json={"ok": True})]
-    inv = HttpInvoker(backoff=0)
+    inv = HttpBinding(backoff=0)
     action, form = _af("POST")
 
     with pytest.raises(TransportError) as ei:
@@ -173,7 +173,7 @@ async def test_post_retried_when_opted_in(routed):
         httpx.Response(503),
         httpx.Response(200, json={"ok": True}),
     ]
-    inv = HttpInvoker(backoff=0, retry_non_idempotent=True)
+    inv = HttpBinding(backoff=0, retry_non_idempotent=True)
     action, form = _af("POST")
 
     result = await inv.invoke(action, form, {})
@@ -196,7 +196,7 @@ async def test_randomized_fault_depth(routed, no_sleep):
         ok = httpx.Response(200, json={"ok": True})
         routed["responses"] = [httpx.Response(503) for _ in range(fails)] + [ok]
         routed["calls"] = 0
-        inv = HttpInvoker(backoff=0, retries=retries)
+        inv = HttpBinding(backoff=0, retries=retries)
         action, form = _af("GET")
         if fails <= retries:
             assert await inv.invoke(action, form, {}) == {"ok": True}
@@ -280,7 +280,7 @@ async def test_all_transport_errors_are_retried_and_normalized(routed, no_sleep,
         raise exc
 
     routed["responses"] = [boom, boom, boom]
-    inv = HttpInvoker(backoff=0, retries=2)
+    inv = HttpBinding(backoff=0, retries=2)
     action, form = _af("GET")
 
     with pytest.raises(TransportError) as ei:
@@ -299,7 +299,7 @@ async def test_concurrent_calls_share_one_pooled_client(routed):
 
     n = 40
     routed["responses"] = [httpx.Response(200, json={"ok": True}) for _ in range(n)]
-    inv = HttpInvoker(backoff=0)
+    inv = HttpBinding(backoff=0)
 
     async def call():
         action, form = _af("GET")

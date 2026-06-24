@@ -10,7 +10,7 @@ from __future__ import annotations
 import base64
 import io
 
-from thingctx.invokers.media.frame import Frame
+from thingctx.bindings.builtin.media.frame import Frame
 
 
 def frame_to_jpeg(frame: Frame, *, quality: int = 85) -> bytes:

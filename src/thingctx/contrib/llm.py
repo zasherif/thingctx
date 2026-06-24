@@ -1,7 +1,7 @@
 """LLMHost: a tool-calling loop over a ThingClient. litellm is imported
 lazily here only, so the pure ThingClient has no LLM dependency.
 
-    client = ThingClient(tds=[td], invokers=[HttpInvoker()])
+    client = ThingClient(tds=[td], bindings=[HttpBinding()])
     host = LLMHost(client, model="anthropic/claude-sonnet-4-6")
     print(await host.chat("read temp-1 and report it"))
 """
@@ -142,8 +142,8 @@ class LLMHost:
 
             payload = base64.b64encode(bytes(image)).decode("ascii")
             return "data:image/jpeg;base64," + payload
-        from thingctx.invokers.media import Frame
-        from thingctx.invokers.media.encode import frame_to_data_url
+        from thingctx.bindings.builtin.media import Frame
+        from thingctx.bindings.builtin.media.encode import frame_to_data_url
 
         if isinstance(image, Frame):
             return frame_to_data_url(image)

@@ -2,7 +2,7 @@
 neutral :class:`~thingctx.auth.credentials.Credential` material.
 
 A provider knows *one* kind of scheme. It never touches a request or a
-connection -- it only produces material. Token-minting providers (OAuth2
+connection; it only produces material. Token-minting providers (OAuth2
 client-credentials, JWT-bearer) call their IdP over HTTPS and return a
 :class:`BearerToken`; the AWS provider returns signing material. How that
 material is attached is the transport applier's job, not the provider's.
@@ -32,6 +32,7 @@ from thingctx.auth.sigv4 import _AWS_SCHEMES, _aws_creds
 __all__ = [
     "CredentialProvider",
     "AuthStrategy",
+    "BaseAuth",
     "DirectCredentialAuth",
     "NoSecAuth",
     "StaticBearerAuth",
@@ -59,8 +60,12 @@ class CredentialProvider(Protocol):
         ...
 
 
-class _BaseAuth:
-    """Default no-op provider so a concrete one implements only what it needs."""
+class BaseAuth:
+    """Optional public base for a custom credential provider: it supplies no-op
+    ``matches``/``resolve`` defaults so a concrete provider implements only what it
+    needs. The contract is the :class:`CredentialProvider` protocol; inheriting
+    this is convenience, not a requirement, and it is the same base the built-in
+    providers use."""
 
     name = "base"
 
@@ -80,13 +85,13 @@ AuthStrategy = CredentialProvider
 # --------------------------------------------------------------------------- #
 
 
-class DirectCredentialAuth(_BaseAuth):
+class DirectCredentialAuth(BaseAuth):
     """Pass through credential material the caller already built.
 
     If the runtime secret is itself a :class:`Credential` (a ``ClientCertificate``
     for mutual TLS, a pre-minted ``BearerToken``, ...), use it as-is for whatever
     scheme the owner declares. This is the seam for transport-level material that
-    no security scheme names -- notably mTLS, which is reused across HTTPS, MQTT,
+    no security scheme names, notably mTLS, which is reused across HTTPS, MQTT,
     OPC-UA and any other TLS transport."""
 
     name = "direct"
@@ -98,14 +103,14 @@ class DirectCredentialAuth(_BaseAuth):
         return ctx.credential
 
 
-class NoSecAuth(_BaseAuth):
+class NoSecAuth(BaseAuth):
     name = "nosec"
 
     def matches(self, scheme: Any, credential: Any) -> bool:
         return getattr(scheme, "scheme", None) == "nosec"
 
 
-class StaticBearerAuth(_BaseAuth):
+class StaticBearerAuth(BaseAuth):
     name = "bearer"
 
     def matches(self, scheme: Any, credential: Any) -> bool:
@@ -119,7 +124,7 @@ class StaticBearerAuth(_BaseAuth):
         return BearerToken(token=str(token))
 
 
-class BasicAuth(_BaseAuth):
+class BasicAuth(BaseAuth):
     name = "basic"
 
     def matches(self, scheme: Any, credential: Any) -> bool:
@@ -141,7 +146,7 @@ class BasicAuth(_BaseAuth):
         return BasicCredential(username=user, password=pw)
 
 
-class ApiKeyAuth(_BaseAuth):
+class ApiKeyAuth(BaseAuth):
     name = "apikey"
 
     def matches(self, scheme: Any, credential: Any) -> bool:
@@ -194,7 +199,7 @@ def _cache_put(cache: dict, key: tuple, token: str, expires_in: Any) -> None:
     cache[key] = (token, time.monotonic() + ttl)
 
 
-class OAuth2ClientCredentialsAuth(_BaseAuth):
+class OAuth2ClientCredentialsAuth(BaseAuth):
     """OAuth2 ``client_credentials`` and ``password`` grants with a shared secret.
 
     Sends the secret as HTTP Basic, falling back to a form field if the endpoint
@@ -295,7 +300,7 @@ class OAuth2ClientCredentialsAuth(_BaseAuth):
         return BearerToken(token=access)
 
 
-class OAuth2JwtBearerAuth(_BaseAuth):
+class OAuth2JwtBearerAuth(BaseAuth):
     """OAuth2 JWT-bearer assertion grant (RFC 7523).
 
     The client proves itself by signing a short-lived JWT with its private key
@@ -376,7 +381,7 @@ class OAuth2JwtBearerAuth(_BaseAuth):
 # --------------------------------------------------------------------------- #
 
 
-class AwsSigV4Auth(_BaseAuth):
+class AwsSigV4Auth(BaseAuth):
     """Recognize the AWS SigV4 scheme and produce neutral signing material.
 
     Returns a :class:`SignatureCredential` with ``algorithm="aws-sigv4"``; the

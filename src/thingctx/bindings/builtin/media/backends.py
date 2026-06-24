@@ -1,4 +1,4 @@
-"""Blocking media backends for :class:`~thingctx.invokers.media.MediaInvoker`.
+"""Blocking media backends for :class:`~thingctx.bindings.builtin.media.MediaBinding`.
 
 Each backend opens a source and yields decoded :class:`Frame` objects. They run
 in a worker thread, never on the event loop. Heavy dependencies (``av``,
@@ -14,7 +14,8 @@ from collections.abc import Iterator
 from urllib.parse import urlparse
 
 from thingctx.auth import redact_url
-from thingctx.invokers.media.frame import Frame
+from thingctx.bindings.builtin.media.frame import Frame, MediaBackend
+from thingctx.contracts import implements
 
 _PYAV_SCHEMES = ("rtsp", "rtsps", "srt", "rtmp", "rtmps", "http", "https", "file", "")
 _NOT_PYAV_SOURCES = ("webrtc", "genicam")
@@ -62,6 +63,7 @@ def _install_libav_redaction() -> None:
     log._thingctx_redacted = True  # type: ignore[attr-defined]
 
 
+@implements(MediaBackend)
 class PyAVBackend:
     """Decode RTSP / HLS / RTMP / HTTP / MJPEG / SRT to frames via FFmpeg
     (PyAV), video (RGB) or audio (PCM) per the ``track`` option. Cannot handle
@@ -201,6 +203,7 @@ class PyAVBackend:
                 container.mux(packet)
 
 
+@implements(MediaBackend)
 class ExtractorBackend(PyAVBackend):
     """Resolve a web page URL to a direct media URL with yt-dlp, then decode it
     with PyAV. yt-dlp covers hundreds of sites, so a new source needs a TD, not

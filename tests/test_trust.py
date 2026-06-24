@@ -1,10 +1,10 @@
-"""Trust layer: approval gating + verify() grounding, over LocalInvoker."""
+"""Trust layer: approval gating + verify() grounding, over LocalBinding."""
 
 from __future__ import annotations
 
 import pytest
 
-from thingctx import LocalInvoker, ThingClient
+from thingctx import LocalBinding, ThingClient
 
 TD = {
     "@context": "https://www.w3.org/2022/wot/td/v1.1",
@@ -47,7 +47,7 @@ class Pump:
 
 
 def _client(**kw):
-    return ThingClient(tds=[TD], invokers=[LocalInvoker(Pump())], **kw)
+    return ThingClient(tds=[TD], bindings=[LocalBinding(Pump())], **kw)
 
 
 @pytest.mark.asyncio
@@ -131,7 +131,7 @@ async def test_verify_detects_type_mismatch():
         },
     }
     # device returns int 1200, TD now declares string -> mismatch
-    client = ThingClient(tds=[bad], invokers=[LocalInvoker(Pump())])
+    client = ThingClient(tds=[bad], bindings=[LocalBinding(Pump())])
     report = (await client.verify())[0]
     assert not report.ok
     assert any("declared string" in c.detail for c in report.checks)
@@ -145,7 +145,7 @@ async def test_verify_detects_unreadable_property():
             "ghost": {"type": "integer", "readOnly": True, "forms": [{"href": "local://ghost"}]}
         },
     }
-    client = ThingClient(tds=[bad], invokers=[LocalInvoker(Pump())])  # no 'ghost' on device
+    client = ThingClient(tds=[bad], bindings=[LocalBinding(Pump())])  # no 'ghost' on device
     report = (await client.verify())[0]
     assert not report.ok
 
@@ -164,6 +164,6 @@ async def test_verify_does_not_flag_binary_media():
             }
         },
     }
-    inv = LocalInvoker({"frame": lambda: b"\x89PNG\r\n"})
-    report = (await ThingClient(tds=[td], invokers=[inv]).verify())[0]
+    inv = LocalBinding({"frame": lambda: b"\x89PNG\r\n"})
+    report = (await ThingClient(tds=[td], bindings=[inv]).verify())[0]
     assert report.ok, report.as_dict()
