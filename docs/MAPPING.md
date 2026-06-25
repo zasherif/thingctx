@@ -135,8 +135,12 @@ state.
 
 - Tool specifications use the OpenAI function format; other agent runtimes use other
   formats.
-- Events are projected to subscriptions rather than to callable tools; an agent
-  restricted to request and reply invocations does not observe them.
+- Events and observable properties are projected to subscriptions over a streaming
+  binding. An agent restricted to request and reply invocations has no channel for a
+  push, and obtains such data by reading on demand rather than by subscription.
+- A given agent runtime may surface only a subset of the projected operations. One
+  that exposes callable tools and readable resources, for example, carries actions
+  and property reads but not property writes or subscriptions.
 - Template variables are bound by name from the argument object; their individual
   schemas are not separately enforced at this layer.
 - Only the HTTP, MQTT, and local bindings are mapped. Other bindings, including CoAP
