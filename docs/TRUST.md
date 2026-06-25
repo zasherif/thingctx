@@ -33,7 +33,7 @@ without a prompt.
 `await client.verify(thing_id=None)` returns a `VerifyReport` per Thing. For each
 **readable** property it reads the live value and checks it against the declared
 type when that type is scalar. The check is lenient (absent/non-scalar types pass
-on a successful read) and **read-only** — actions are never invoked, so it is
+on a successful read) and **read-only**: actions are never invoked, so it is
 safe against production.
 
 ```python
@@ -60,7 +60,7 @@ custom approver: `build_mcp_server(client, approve=my_callable)`.
 | `client.verify(thing_id=None)` | ground TD(s) against the live Thing |
 | `VerifyReport`, `Check` | grounding results |
 
-Risk is read from the TD and policy — thingctx does not infer that an
+Risk is read from the TD and policy; thingctx does not infer that an
 un-annotated idempotent action is dangerous; mark it in the TD or widen
 `approve_when`. The approver is the integration point for a UI, audit log, or
 out-of-band confirmation.

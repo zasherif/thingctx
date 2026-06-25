@@ -1,21 +1,16 @@
-"""09, authenticated RTSP end to end, fully local: an RTSP server that *requires*
-a username and password, consumed with thingctx; credentials supplied through
-the auth layer, never baked into the TD.
+"""09, authenticated RTSP, end to end and fully local: an RTSP server that
+requires a username and password, consumed with thingctx.
 
-This is the shape of a real IP camera. The TD declares ``basic`` security; the
-secret is handed to the client at runtime (keyed by the Thing's slug) and the
-MediaBinding resolves it into the RTSP URL userinfo via the transport-neutral
-auth layer (the same ``resolve_credentials`` primitive HTTP and MQTT use). The
-TD itself carries no secret.
+This is how a real IP camera works. The TD declares ``basic`` security; the secret
+is handed to the client at runtime, and the MediaBinding resolves it into the RTSP
+URL userinfo via the same ``resolve_credentials`` primitive HTTP and MQTT use. The
+TD carries no secret.
 
     MediaMTX (RTSP :8554, reading requires auth)
-        ^ ffmpeg publishes a test pattern (anonymous)  ->  rtsp://127.0.0.1:8554/cam
-        |
+        ^ ffmpeg publishes a test pattern  ->  rtsp://127.0.0.1:8554/cam
     thingctx reads with basic credentials  ->  decoded frames
 
-Needs two binaries on PATH:
-    brew install mediamtx ffmpeg
-
+Needs two binaries on PATH::  brew install mediamtx ffmpeg
 Run::  python examples/09_rtsp_local.py
 """
 

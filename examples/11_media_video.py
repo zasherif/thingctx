@@ -1,19 +1,16 @@
-"""11, thingctx + native video: hand the model the clip itself, not stills.
+"""11, native video: hand the model the clip itself, not stills.
 
-10 sent a strip of frames; portable, but the model never sees true motion or
-hears audio. A few providers take a real video clip and sample it themselves:
-`host.see_video(url, ...)` sends a native `video_url` content part. Same host and
-wiring as 08/10; only the content part differs.
+10 sent a strip of frames; the model never saw true motion or heard audio. A few
+providers take a real clip and sample it themselves: `host.see_video(url, ...)`
+sends a native `video_url` part. Same host and wiring as 08/10; only the content
+part differs.
 
-Unlike 08/09/10 (which watch a *specific* camera or stream, a concrete device with
-a fixed source), this is a *service*: it understands any video you give it. So the
-clip URL is a call time argument, not baked into the TD; the same parameterized
-pattern as the "Video pages" Thing in 07 (`uriVariables` with ``"{+url}"``).
+This is a service, not a fixed camera: the clip URL is a call-time argument
+(``uriVariables`` with ``"{+url}"``), the same parameterized pattern as 07.
 
-This needs a provider with native video input. Unlike 08/10 it is NOT fully local:
-Ollama is image-only. Set one of:
+Needs a provider with native video input (not local; Ollama is image-only)::
 
-    OPENROUTER_API_KEY=...                          # uses openrouter/google/gemini-2.5-flash
+    OPENROUTER_API_KEY=...                          # openrouter/google/gemini-2.5-flash
     THINGCTX_VIDEO_MODEL=hosted_vllm/your-qwen3-vl  # a self-hosted vLLM
 
 Run::  OPENROUTER_API_KEY=... python examples/11_media_video.py

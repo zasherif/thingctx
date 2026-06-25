@@ -9,7 +9,7 @@ Run from the repo root with `PYTHONPATH=src`.
 | [03_thingctx_llm.py](03_thingctx_llm.py) | Add an LLM (local Ollama or an API key). |
 | [04_trust.py](04_trust.py) | Approval gating + `verify()` grounding (no model). See [docs/TRUST.md](../docs/TRUST.md). |
 | [05_oauth2.py](05_oauth2.py) | A full OAuth2 client-credentials flow, offline: local token server + protected API, driven from a TD. |
-| [13_custom_stack.py](13_custom_stack.py) | **Extending thingctx.** All four seams in one programming model: a custom transport (`ProtocolBinding` + `AuthMixin`), auth scheme (`CredentialProvider`/`BaseAuth`), discovery source (`Registry`), and media engine (`MediaBackend`), each `@implements`-checked and run through its conformance kit. Offline. See [docs/BINDINGS.md](../docs/BINDINGS.md). |
+| [13_custom_stack.py](13_custom_stack.py) | **Extending thingctx.** All four parts you can extend, in one programming model: a custom transport (`ProtocolBinding` + `AuthMixin`), auth scheme (`CredentialProvider`/`BaseAuth`), discovery source (`Registry`), and media engine (`MediaBackend`), each `@implements`-checked and run through its conformance kit. Offline. See [docs/BINDINGS.md](../docs/BINDINGS.md). |
 | [registry/](registry/) | Standalone TDs. Point `thingctx-mcp` or `from_registry` here. |
 
 01/02 need no model. The pump device is [_pump.py](_pump.py) (HTTP + SSE + MQTT).
@@ -29,4 +29,4 @@ target. Needs PyAV (`pip install 'thingctx[media]'`); a few are gated on
 | [11_media_video.py](11_media_video.py) | Parameterized video-understanding service: pass a clip URL at call time. |
 | [12_media_publish.py](12_media_publish.py) | The publish path; encode and push frames to a file or live RTSP (round trip verified). |
 
-The media engine is also pluggable (`MediaBackend`); [13_custom_stack.py](13_custom_stack.py) shows a custom one alongside the other seams.
+The media engine is also pluggable (`MediaBackend`); [13_custom_stack.py](13_custom_stack.py) shows a custom one alongside the other parts.

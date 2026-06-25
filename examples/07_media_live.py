@@ -1,28 +1,18 @@
-"""Drive a Thing's media plane through thingctx, end to end, from a TD.
+"""07, the media plane: consume a Thing's audio/video, end to end, from a TD.
 
-A media affordance is the continuous audio/video face of a Thing. Its form points
-at a stream by reference (there is no W3C binding for RTSP/WebRTC, so the form
-carries an ``x-thingctx-media`` hint), and thingctx routes it to the MediaBinding
-instead of fetching it. Media is consumed with ``client.frames()``; it is not a
-request/response action, so it never appears in ``list_actions()`` and cannot be
-``invoke()``-d. The same surface serves both tracks (``track="video"|"audio"``).
+A media affordance is a Thing's continuous audio/video stream. Its form points at
+a stream by reference (an ``x-thingctx-media`` hint, since W3C has no RTSP/WebRTC
+binding), so thingctx routes it to the MediaBinding. Media is consumed with
+``client.frames()``, not ``invoke()``; the same call serves both tracks
+(``track="video"|"audio"``).
 
-Two media Things, two patterns:
+Two patterns: a direct MP4 over HTTPS, and one parameterized "video pages" Thing
+whose ``watch(url)`` takes any page URL yt-dlp resolves (``href`` is ``"{+url}"``,
+media hint ``resolve: "page"``). One Thing covers every site; no per-site code.
 
-- A direct MP4 over HTTPS; the href is the stream.
-- One parameterized "video pages" Thing whose ``watch(url)`` takes ANY page URL
-  (anything yt-dlp resolves). The site is a call time argument, not a per site
-  TD: ``href`` is ``"{+url}"`` and the media hint ``resolve: "page"`` says
-  "extract a stream from this page". One Thing covers every site; thingctx
-  carries no per site code.
-
-Both are consumed identically: ``client.frames(name, {...})``.
-
-Private/members content needs a login, and that flows through the same auth layer
-as HTTP/MQTT: an account login is a ``basic`` security scheme whose secret is
-handed to the client (never in the TD), and cookie access (the reliable path for
-private YouTube) is an extractor option declared on the form's media hint. See
-the optional authenticated section at the end.
+Private content flows through the same auth layer as HTTP/MQTT: a ``basic`` scheme
+whose secret is handed to the client (never in the TD), with cookie access as a
+media-hint option. See the optional authenticated section at the end.
 
 Run:
 

@@ -1,29 +1,28 @@
-"""Extending thingctx: one programming model, every seam.
+"""13, extending thingctx: one programming model for every part you can extend.
 
-thingctx has four extension seams, and they share one shape, so what you learn for
-one carries to the rest. For each seam:
+thingctx has four parts you can extend, and they all work the same way, so what
+you learn for one applies to the rest. For each:
 
-    * a ``typing.Protocol`` is the contract (implement the shape, inherit nothing);
-    * ``@implements(Contract)`` checks that shape at import time;
-    * an optional public base saves boilerplate where there is any;
-    * a conformance kit asserts the runtime behaviour a type checker cannot.
+    * a ``typing.Protocol`` is the contract (match the methods, inherit nothing);
+    * ``@implements(Contract)`` checks that match at import time;
+    * an optional public base saves boilerplate;
+    * a conformance kit checks the runtime behaviour a type checker cannot.
 
-    Seam        Contract              Optional base   Conformance kit
+    Part        Contract              Optional base   Conformance kit
     transport   ProtocolBinding       AuthMixin (*)   assert_binding_contract
     auth        CredentialProvider    BaseAuth        assert_provider_contract
     discovery   Registry              -               assert_registry_contract
     media       MediaBackend          -               assert_media_backend_contract
     (*) only when the transport authenticates.
 
-The built-in http / mqtt / media / local bindings implement these same contracts,
-and an out-of-tree package can use these exact APIs plus the entry-point discovery
-shown at the end.
+The built-in http / mqtt / media / local bindings implement these same contracts;
+an out-of-tree package uses these exact APIs plus the entry-point discovery shown
+at the end.
 
-It drives one composite Thing: a pump-camera unit whose single TD spans the control
-plane (an action over a custom transport) and the media plane (a live camera), from
-one client, with a different security scheme per plane. Control uses a built-in
-scheme; media overrides it with the custom one (WoT form-level security). Fully
-offline; no extras needed.
+It drives one composite Thing: a pump-camera whose single TD spans the control
+plane (an action over a custom transport) and the media plane (a live camera),
+from one client, with a different security scheme per plane (WoT form-level
+security). Fully offline.
 
     PYTHONPATH=src python examples/13_custom_stack.py
 """
@@ -59,7 +58,7 @@ from thingctx.testing import (
 
 
 # --------------------------------------------------------------------------- #
-# Discovery seam: where Thing Descriptions come from.
+# Discovery: where Thing Descriptions come from.
 # --------------------------------------------------------------------------- #
 @implements(Registry)
 class FleetRegistry:
@@ -74,7 +73,7 @@ class FleetRegistry:
 
 
 # --------------------------------------------------------------------------- #
-# Auth seam: a brand-new security scheme, transport-neutral.
+# Auth: a brand-new security scheme, transport-neutral.
 # --------------------------------------------------------------------------- #
 @implements(CredentialProvider)
 class FleetTokenAuth(BaseAuth):
@@ -94,7 +93,7 @@ class FleetTokenAuth(BaseAuth):
 
 
 # --------------------------------------------------------------------------- #
-# Transport seam: a brand-new scheme that authenticates like a built-in.
+# Transport: a brand-new scheme that authenticates like a built-in.
 # --------------------------------------------------------------------------- #
 @implements(ProtocolBinding)
 class FleetSimBinding(AuthMixin):
@@ -118,7 +117,7 @@ class FleetSimBinding(AuthMixin):
 
 
 # --------------------------------------------------------------------------- #
-# Media seam: the engine behind the media binding (a second contract, same shape).
+# Media: the engine behind the media binding (a second contract, same pattern).
 # --------------------------------------------------------------------------- #
 @implements(MediaBackend)
 class SimCameraBackend:
@@ -214,7 +213,7 @@ async def main() -> None:
     except ImportError:
         print("composite TD validation skipped (install thingctx[validate]).")
 
-    # 1) Prove every seam against its conformance kit before wiring; the same check
+    # 1) Prove every part against its conformance kit before wiring; the same check
     #    works for a built-in, a custom, or an out-of-tree extension.
     assert_binding_contract(sim)
     assert_provider_contract(FleetTokenAuth())

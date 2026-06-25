@@ -90,7 +90,7 @@ class DirectCredentialAuth(BaseAuth):
 
     If the runtime secret is itself a :class:`Credential` (a ``ClientCertificate``
     for mutual TLS, a pre-minted ``BearerToken``, ...), use it as-is for whatever
-    scheme the owner declares. This is the seam for transport-level material that
+    scheme the owner declares. This is the path for transport-level material that
     no security scheme names, notably mTLS, which is reused across HTTPS, MQTT,
     OPC-UA and any other TLS transport."""
 

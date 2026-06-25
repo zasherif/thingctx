@@ -1,7 +1,7 @@
-# node-wot-produced TD → thingctx
+# node-wot-produced TD to thingctx
 
 node-wot (the W3C WoT reference implementation) produces a Thing Description;
-thingctx consumes it and drives the Thing using only that TD — no node-wot
+thingctx consumes it and drives the Thing using only that TD, with no node-wot
 client, SDK, or MCP server.
 
 A conformance check (same shape as [`../ditto`](../ditto)): thingctx consumes
@@ -24,8 +24,8 @@ contract.
 
 ## Files
 
-- `producer.js` — minimal node-wot Servient exposing the `counter` Thing.
-- `drive_nodewot_td.py` — consumes the served TD with thingctx and drives it.
+- `producer.js`: minimal node-wot Servient exposing the `counter` Thing.
+- `drive_nodewot_td.py`: consumes the served TD with thingctx and drives it.
 
 ## Reproduce
 
@@ -56,5 +56,5 @@ read  count -> 1
 
 node-wot defaults a Thing's `id` to a random `urn:uuid:...`, and thingctx derives
 the address prefix (slug) from that id. Either set a stable `id` in the producer
-(this demo uses `urn:dev:counter`) or derive the prefix at runtime (the driver
+(this demo uses `urn:dev:counter`) or derive the prefix at runtime (the binding
 does `client.list_properties()[0].split(".")[0]`), which works for any producer.

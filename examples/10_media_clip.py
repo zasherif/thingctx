@@ -1,13 +1,12 @@
-"""10, thingctx + a vision model over a clip: 08, but several frames over time.
+"""10, a vision model over a clip: 08, but several frames over time.
 
-08 showed one frame to `host.see(frame, ...)`. A single still can't show motion.
-Image only models (and MCP) can't take a video container, so the portable clip is
-a handful of frames sampled over time, sent as a sequence of stills. `see()` takes
-a list and the model reads it as motion; no new model capability required.
+08 showed one frame; a single still can't show motion. Image-only models (and
+MCP) can't take a video container, so the portable clip is a handful of frames
+sampled over time and sent as a sequence of stills. `see()` takes the list and
+reads it as motion; no new model capability required.
 
-Runs fully local with no API key, using the smallest local Ollama vision model
-you have pulled (see pick_vlm_model). For a native video clip (the model samples
-the video itself, with audio) see 11_media_video.py.
+Runs fully local with no API key (see pick_vlm_model). For a native video clip
+with audio, see 11_media_video.py.
 
 Setup once if you have no vision model::  ollama pull qwen3-vl:2b
 Run::  python examples/10_media_clip.py

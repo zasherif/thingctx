@@ -1,7 +1,7 @@
-# Ditto-generated TD → thingctx
+# Ditto-generated TD to thingctx
 
 A small interop demo: **Eclipse Ditto produces a W3C Thing Description, and
-thingctx consumes it** — turning a real digital twin into callable
+thingctx consumes it**, turning a real digital twin into callable
 properties/actions and LLM tool specs, with no Ditto-specific code, no SDK, and
 no MCP server. Just the description.
 
@@ -22,15 +22,15 @@ Ditto is the **producer**: hand it a Thing Model URL, it stores a twin and, on
 request, emits a conformant TD whose `forms` describe how to reach that twin
 over its HTTP API (hrefs, methods, `basic` security). thingctx is the
 **consumer**: it reads that TD and exposes the twin. They never knew about each
-other — the TD is the only contract.
+other; the TD is the only contract.
 
 ## Files
 
-- `ditto-generated-td.json` — the TD **Ditto generated** (the fixture). Note
+- `ditto-generated-td.json`: the TD **Ditto generated** (the fixture). Note
   `base`, the `basic_sc` security scheme, the `attributes/*` property forms with
   `htv:methodName`, and the `inbox/messages/*` action forms.
-- `drive_ditto_td.py` — consumes that TD with thingctx and drives the live twin.
-- `capture_td.sh` — reproduces the fixture from scratch (Docker → Ditto → TD).
+- `drive_ditto_td.py`: consumes that TD with thingctx and drives the live twin.
+- `capture_td.sh`: reproduces the fixture from scratch (Docker to Ditto to TD).
 
 ## Result (live run)
 
@@ -48,7 +48,7 @@ read  dimmer-level -> 0.42
 OK: thingctx drove a Ditto twin using only the generated TD.
 ```
 
-Confirmed independently against Ditto's API — the twin's
+Confirmed independently against Ditto's API; the twin's
 `attributes.dimmer-level` became `0.42`. The property read/write path is fully
 server-side (twin state), so it works without a physical device attached. The
 `toggle`/`switch-on-for-duration` actions map to Ditto *messages*
@@ -76,6 +76,6 @@ Credentials default to Ditto's compose defaults (`ditto:ditto`); override with
 
 Ditto (and Bosch IoT Things behind it) is a credible, standards-compliant TD
 producer for industrial digital twins. That a twin it generated drops straight
-into thingctx with zero glue is the point: **any conformant TD producer →
-thingctx**. thingctx is a consumer, complementary to TD producers and
-directories — not a competitor to any of them.
+into thingctx with zero glue is the point: **any conformant TD producer works
+with thingctx**. thingctx is a consumer, complementary to TD producers and
+directories, not a competitor to any of them.

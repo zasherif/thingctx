@@ -1,12 +1,11 @@
 """08, thingctx + a vision model: 03's pattern, now with an image.
 
 03 let an LLM drive a Thing's actions. 08 is the same wiring (`from_td(...,
-model=...)` gives a host you call), but the Thing is a camera and the model is a
-VLM: `host.see(frame, ...)` instead of `host.chat(...)`. A media frame is pulled
-off the stream with `client.frames()` and handed to the model. The integration is
-identical to the text case; only `see` (an image turn) differs from `chat`.
+model=...)`), but the Thing is a camera and the model is a VLM: `host.see(frame,
+...)` instead of `host.chat(...)`. A frame is pulled off the stream with
+`client.frames()` and handed to the model. Only `see` differs from `chat`.
 
-Runs fully local with no API key: it uses the smallest local Ollama vision model
+Runs fully local with no API key, using the smallest local Ollama vision model
 you have pulled (see pick_vlm_model).
 
 Setup once if you have no vision model::  ollama pull qwen3-vl:2b

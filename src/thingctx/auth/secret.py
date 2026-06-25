@@ -20,7 +20,7 @@ _REDACTED = "***"
 def _as_bytes(value: str | bytes | bytearray) -> bytearray:
     if isinstance(value, str):
         return bytearray(value.encode("utf-8"))
-    if isinstance(value, (bytes, bytearray)):
+    if isinstance(value, bytes | bytearray):
         return bytearray(value)
     raise TypeError(f"Secret accepts str or bytes, not {type(value).__name__}")
 
@@ -50,7 +50,7 @@ def _try_lock(buf: bytearray):
         carr = (ctypes.c_char * len(buf)).from_buffer(buf)
         if lib.mlock(carr, len(buf)) == 0:
             return carr
-    except Exception:  # noqa: BLE001  -- best effort only
+    except Exception:  # noqa: BLE001  (best effort only)
         return None
     return None
 
@@ -84,7 +84,7 @@ class Secret:
             lock = os.environ.get("THINGCTX_MLOCK_SECRETS", "") not in ("", "0", "false")
         self._lock_handle = _try_lock(self._buf) if lock else None
 
-    # -- reading ---------------------------------------------------------- #
+    # reading ------------------------------------------------------------- #
 
     def _raw(self) -> bytes:
         if self._wiped:
@@ -99,7 +99,7 @@ class Secret:
         """The secret as raw bytes."""
         return self._raw()
 
-    # -- wiping ----------------------------------------------------------- #
+    # wiping -------------------------------------------------------------- #
 
     def wipe(self) -> None:
         """Overwrite the backing buffer with zeros and release any memory lock.
@@ -123,10 +123,10 @@ class Secret:
     def __del__(self) -> None:
         try:
             self.wipe()
-        except Exception:  # noqa: BLE001  -- never raise from a finalizer
+        except Exception:  # noqa: BLE001  (never raise from a finalizer)
             pass
 
-    # -- constant-time comparison ----------------------------------------- #
+    # constant-time comparison -------------------------------------------- #
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Secret):
@@ -136,7 +136,7 @@ class Secret:
                 return False
         elif isinstance(other, str):
             ob = other.encode("utf-8")
-        elif isinstance(other, (bytes, bytearray)):
+        elif isinstance(other, bytes | bytearray):
             ob = bytes(other)
         else:
             return NotImplemented
@@ -150,7 +150,7 @@ class Secret:
     def __bool__(self) -> bool:
         return not self._wiped and len(self._buf) > 0
 
-    # -- masked display --------------------------------------------------- #
+    # masked display ------------------------------------------------------ #
 
     def __repr__(self) -> str:
         return f"Secret({_REDACTED})"
@@ -160,7 +160,7 @@ class Secret:
     def __format__(self, spec: str) -> str:
         return f"Secret({_REDACTED})"
 
-    # -- block serialization / duplication -------------------------------- #
+    # block serialization / duplication ----------------------------------- #
 
     def __reduce__(self):
         raise TypeError("Secret cannot be pickled")

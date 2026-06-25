@@ -6,20 +6,20 @@ replace any built-in with your own, or add a new protocol (OPC UA, CoAP, Modbus)
 by registering a binding. Bindings load in process: you `pip install` a library,
 you do not run a server.
 
-## Extending thingctx (the seams)
+## Extending thingctx
 
 thingctx is extended through a few small, published contracts. You depend on
 thingctx as a library, implement a contract in your own package, register it at
 run time, keep your package private if you wish, and never fork.
 
-| Seam            | Contract                          | Optional base | Register with                   | Discover         | Conformance |
+| Part            | Contract                          | Optional base | Register with                   | Discover         | Conformance |
 | --------------- | --------------------------------- | ------------- | ------------------------------- | ---------------- | ----------- |
 | Transport       | `ProtocolBinding`                 | `AuthMixin` (if it authenticates) | `BindingRegistry` / `bindings=` | `discover_bindings()` | `assert_binding_contract` |
 | Authentication  | `CredentialProvider`              | `BaseAuth`    | `register_auth` / `extra_auth=` | `discover_auth()` | `assert_provider_contract` |
 | Discovery       | `Registry` (`fetch`)              | none          | `ThingClient.from_registry`     | n/a (constructed)  | `assert_registry_contract` |
 | Media engine    | `MediaBackend`                    | none          | `MediaBinding(backends=[...])`  | n/a (via binding)  | `assert_media_backend_contract` |
 
-Every seam is the same shape: a `typing.Protocol` is the contract, `@implements`
+Every part is the same pattern: a `typing.Protocol` is the contract, `@implements`
 checks it at import, an optional base saves boilerplate, and a conformance kit
 asserts behaviour. One example covers all four:
 [13_custom_stack.py](../examples/13_custom_stack.py). Auth is transport-neutral, so
@@ -29,7 +29,7 @@ media engines are constructed explicitly rather than auto-discovered, because th
 are not standalone installable transports; the entry-point path is for bindings and
 auth providers.
 
-**Multi-language.** These seams are in-process Python contracts: an extension is
+**Multi-language.** These parts are in-process Python contracts: an extension is
 a Python package loaded into the client, not a server you run. There is no
 in-process path for a non-Python binding, by design, because that would require
 an out-of-process boundary (the "a server per integration" shape this project
@@ -128,7 +128,7 @@ capability the runtime binds automatically) and `_resolve_credentials`. The secr
 itself is supplied at runtime via `credentials=` (keyed by id, slug, or scheme),
 never in the TD. Pass the `form` so a form's own security overrides the Thing's for
 that affordance (WoT form-level security), letting one Thing use a different scheme
-per plane. Custom auth *methods* are a separate, already-extensible seam: register a
+per plane. Custom auth *methods* are a separate, already-extensible part: register a
 provider (see [AUTH.md](AUTH.md) and `examples/13_custom_stack.py`); a binding
 consumes whatever providers resolve, transport-neutrally. A binding that needs no
 auth (like the local one) simply does not inherit `AuthMixin`.
@@ -182,7 +182,7 @@ the same way for the [media backend](#media-backends) contract.
 
 ## Media backends
 
-The media plane has a second seam *inside* the media binding. `MediaBinding` is
+The media plane has a second part *inside* the media binding. `MediaBinding` is
 the transport (it routes media forms, resolves auth, and bridges blocking work to
 the event loop); a `MediaBackend` is the engine it runs to decode or encode a
 stream. PyAV (FFmpeg) and a page extractor ship as the built-in backends; a custom

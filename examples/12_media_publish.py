@@ -1,23 +1,16 @@
 """12, the publish (produce) path: thingctx pushes frames out to a media target.
 
-The mirror of consuming a camera. A producer yields frames on the event loop;
+The reverse of consuming a camera. A producer yields frames on the event loop;
 thingctx encodes and muxes them off it and pushes them to the target named by a
 TD form (a file, an ingest URL, or a live endpoint). The target is just a form
-href, so the same `client.publish(...)` call drives any of them.
+href, so one `client.publish(...)` call drives any of them.
 
-    frame source (async)  to  client.publish(...)  to  target
+Part A always runs (encode a clip to a file, then read it back to prove the round
+trip). Part B runs if `mediamtx` is on PATH (publish a live RTSP stream and
+consume it back). An ingest stream key is passed as a uriVariable at call time,
+so it stays out of the stored TD and is scrubbed from surfaced errors.
 
-Part A always runs (encode a clip to a file, then read it back to prove the
-round trip). Part B runs if `mediamtx` is on PATH: publish a live stream to a
-local RTSP server and consume it back concurrently.
-
-Publishing to a live service needs no code change, just a different form href;
-the ingest URL can carry a stream key as a path segment. Pass that key as a
-uriVariable at call time (so it stays out of the stored TD); thingctx scrubs it
-from any surfaced error.
-
-Needs PyAV for Part A (`pip install thingctx[media]`), plus `mediamtx` for B.
-
+Needs PyAV (`pip install thingctx[media]`), plus `mediamtx` for Part B.
 Run::  python examples/12_media_publish.py
 """
 

@@ -41,7 +41,7 @@ jobs:
           skip-existing: true
 
   # Prove the *published* TestPyPI artifact is installable on every supported
-  # Python and that the offline suite passes against it -- not the local tree.
+  # Python and that the offline suite passes against it, not the local tree.
   # Gates the real PyPI publish, so a broken release can't reach the gate.
   smoke:
     name: smoke (TestPyPI)
@@ -72,7 +72,7 @@ jobs:
           done
           python -c "import thingctx; assert thingctx.__version__ == '${VERSION}', thingctx.__version__; print('installed', thingctx.__version__)"
       - name: Import optional surfaces
-        run: python -c "import thingctx.validate, thingctx.invokers, thingctx.runtime, thingctx.integrations.mcp; print('imports OK')"
+        run: python -c "import thingctx.validate, thingctx.bindings, thingctx.runtime, thingctx.integrations.mcp; print('imports OK')"
       - name: Test installed package (offline, isolated from source)
         run: |
           mkdir -p "$RUNNER_TEMP/t"
