@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Unit tests for the Secret container: masked display, explicit unwrap,
 constant-time equality, blocked serialization/copy, and wiping."""
 

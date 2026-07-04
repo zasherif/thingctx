@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """AWS Signature Version 4: a pure signing primitive plus credential helpers.
 
 ``sigv4_sign`` does no I/O and is exposed as ``thingctx.sigv4_sign``. Signing is
@@ -31,7 +33,7 @@ def _aws_creds(cred: Any) -> tuple[str | None, str | None, str | None]:
         )
         st = cred.get("aws_session_token") or cred.get("session_token") or cred.get("token")
         return ak, sk, st
-    if isinstance(cred, (tuple, list)) and len(cred) >= 2:
+    if isinstance(cred, tuple | list) and len(cred) >= 2:
         st = cred[2] if len(cred) > 2 else None
         return cred[0], cred[1], st
     return None, None, None

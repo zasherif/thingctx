@@ -3,23 +3,27 @@
 thingctx is small on purpose, and built so you can add real value in one
 focused pull request. Two contributions matter most:
 
-## Add a transport (an invoker)
+## Add a transport (a binding)
 
-An invoker teaches thingctx to speak one transport. The core has Local,
-HTTP, and MQTT. CoAP, WebSocket, OPC-UA, Modbus, gRPC, serial , each is one
-self-contained class, ~40 lines, that no one has to coordinate on:
+A binding teaches thingctx to speak one transport. The built-in bindings are
+Local, HTTP, MQTT, and media. CoAP, WebSocket, OPC-UA, Modbus, gRPC, serial ,
+each is one self-contained class against the `ProtocolBinding` contract that no
+one has to coordinate on:
 
 ```python
-class CoapInvoker:
+class CoapBinding:
     schemes = ("coap", "coaps")
     async def invoke(self, action, form, arguments): ...
     async def read(self, prop, form): ...
     async def write(self, prop, form, value): ...
 ```
 
-Add it to `src/thingctx/invokers.py` (or its own module), a test, and a
-line in the README. That is the whole PR. A new transport unlocks every
-device that speaks it , high leverage, low surface.
+You do not have to contribute it back: register it with `BindingRegistry` and
+pass `ThingClient(bindings=...)` from your own package. To add one here, drop it
+under `src/thingctx/bindings/builtin/`, prove it with the conformance kit
+(`thingctx.testing.assert_binding_contract`), add a test, and a line in the
+README. See `docs/BINDINGS.md`. A new transport reaches every device that speaks
+it, for a small amount of code.
 
 ## Add a Thing Description
 
@@ -39,12 +43,12 @@ everyone.
 
 This project uses the [Developer Certificate of Origin](DCO) (DCO), not a
 CLA. By signing off you certify that you wrote the contribution, or
-otherwise have the right to submit it under Apache-2.0. 
+otherwise have the right to submit it under Apache-2.0.
 
 Add the sign-off with `-s`:
 
 ```bash
-git commit -s -m "add a CoAP invoker"
+git commit -s -m "add a CoAP binding"
 ```
 
 That appends a trailer matching the commit author:
@@ -58,6 +62,6 @@ commits must be signed off.
 
 ## Good first issues
 
-Adding an invoker for a transport you use, or a TD for a device you own, is
+Adding a binding for a transport you use, or a TD for a device you own, is
 the best first contribution , scoped, testable, and immediately useful to
 the next person.

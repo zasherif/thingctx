@@ -1,8 +1,10 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """MQTT applier: map neutral credential material onto an MQTT connection.
 
 MQTT authenticates at the connection (CONNECT packet / TLS), not per message, so
 this produces a connect-time plan: username/password, a TLS client certificate,
-and -- for MQTT v5 -- enhanced-authentication method/data. The invoker feeds the
+and, for MQTT v5, enhanced-authentication method/data. The binding feeds the
 plan to paho before ``connect()``; it holds no auth logic. Kinds with no MQTT
 meaning (``SignatureCredential``, ``RequestSigner``) are ignored.
 
@@ -29,9 +31,10 @@ from thingctx.auth.credentials import (
 __all__ = ["MqttAuthPlan", "apply_mqtt"]
 
 
-@dataclass
+@dataclass(repr=False)
 class MqttAuthPlan:
-    """How to authenticate an MQTT connection."""
+    """How to authenticate an MQTT connection. Holds plaintext (username/
+    password) only at the point of use; its ``repr`` masks credentials."""
 
     username: str | None = None
     password: str | None = None
@@ -42,6 +45,14 @@ class MqttAuthPlan:
     @property
     def has_credentials(self) -> bool:
         return any((self.username is not None, self.password is not None, self.tls, self.enhanced))
+
+    def __repr__(self) -> str:
+        return (
+            f"MqttAuthPlan(username={'***' if self.username is not None else None}, "
+            f"password={'***' if self.password is not None else None}, "
+            f"tls={self.tls!r}, enhanced={self.enhanced!r}, "
+            f"properties={sorted(self.properties)!r})"
+        )
 
 
 def apply_mqtt(creds: list[Credential]) -> MqttAuthPlan:

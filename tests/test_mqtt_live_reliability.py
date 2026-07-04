@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Live MQTT reliability against a real broker (e.g. a local Mosquitto).
 
 These complement the fake-broker logic tests with a real wire round-trip:
@@ -22,7 +24,7 @@ from types import SimpleNamespace
 import pytest
 
 from thingctx import TransportError
-from thingctx.invokers import MqttInvoker
+from thingctx.bindings import MqttBinding
 
 pytestmark = pytest.mark.network
 
@@ -65,7 +67,7 @@ def _form(topic: str):
 
 async def test_live_subscribe_receives_real_publish():
     topic = f"thingctx/test/{uuid.uuid4().hex}/events"
-    inv = MqttInvoker(qos=1)
+    inv = MqttBinding(qos=1)
     _action, form = _form(topic)
 
     stream = await inv.subscribe("evt", form)
@@ -98,7 +100,7 @@ async def test_live_invoke_round_trip_with_echo_responder():
     responder.loop_start()
     try:
         time.sleep(0.3)  # responder subscription active before we publish
-        inv = MqttInvoker(qos=1, timeout=5.0)
+        inv = MqttBinding(qos=1, timeout=5.0)
         action, form = _form(cmd)
 
         result = await inv.invoke(action, form, {"rpm": 1234})
@@ -110,7 +112,7 @@ async def test_live_invoke_round_trip_with_echo_responder():
 
 
 async def test_live_connection_refused_is_normalized():
-    inv = MqttInvoker(connect_retries=0, connect_timeout=1.0, backoff=0)
+    inv = MqttBinding(connect_retries=0, connect_timeout=1.0, backoff=0)
     # A port with nothing listening: a real refused/timed-out connect.
     action = SimpleNamespace(name="cmd")
     form = SimpleNamespace(href=f"mqtt://{HOST}:12399/thingctx/test/dead", raw={})

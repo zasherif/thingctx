@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Parse a WoT Thing Description (JSON) into actions, properties, events,
 and their transport bindings. Stdlib only.
 """
@@ -27,6 +29,11 @@ class WoTForm:
     def fill(self, args: dict[str, Any]) -> tuple[str, dict[str, Any]]:
         """Substitute {var} placeholders in the href from args, and return
         (href, remaining_args) with the consumed vars removed.
+
+        ``{var}`` percent encodes the value (safe for a path or query segment).
+        ``{+var}`` (RFC 6570 reserved expansion) substitutes it verbatim, for
+        when the variable *is* a URL; for example a media href that takes any
+        source URL as an argument (``"href": "{+url}"``).
         """
         import re as _re
 
@@ -34,14 +41,17 @@ class WoTForm:
 
         def _sub(m):
             key = m.group(1)
+            raw = key.startswith("+")
+            if raw:
+                key = key[1:]
             if key in args:
                 used.add(key)
                 from urllib.parse import quote
 
-                return quote(str(args[key]), safe="")
+                return str(args[key]) if raw else quote(str(args[key]), safe="")
             return m.group(0)
 
-        href = _re.sub(r"\{([^}]+)\}", _sub, self.href)
+        href = _re.sub(r"\{(\+?[^}]+)\}", _sub, self.href)
         rest = {k: v for k, v in args.items() if k not in used}
         return href, rest
 

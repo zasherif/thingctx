@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """A registry is anything that yields Thing Descriptions.
 
 The MCP server takes a Registry, not a fixed source, so "where the TDs

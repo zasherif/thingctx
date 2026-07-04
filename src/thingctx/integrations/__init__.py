@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Bridges that expose a thingctx Thing to other agent ecosystems.
 
 mcp: a generic stdio MCP server. Point it at any TD and the device's

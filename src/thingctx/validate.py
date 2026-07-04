@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Validate a TD against the bundled W3C WoT TD 1.1 schema
 (1.1-12-March-2025, official W3C validation schema). Needs the [validate]
 extra (jsonschema).

@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 # Run `pre-commit install` once to enable these on every commit.
 # See SECURITY.md for the full setup (including the local internal-name guard).
 minimum_pre_commit_version: "3.5.0"

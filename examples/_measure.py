@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Measure 01 (MCP) vs 02 (thingctx) on the SAME pump, for the README.
 
 Three numbers, both paths driving the identical device:
@@ -181,15 +183,15 @@ def start_http_mcp(td) -> tuple[subprocess.Popen, str]:
 
 async def ttfc_thingctx(pump, td) -> float:
     """consume the TD (validate against the W3C schema) + first invoke."""
-    from thingctx import HttpInvoker, LocalInvoker, MqttInvoker, ThingClient
+    from thingctx import HttpBinding, LocalBinding, MqttBinding, ThingClient
 
     t0 = time.perf_counter()
     client = ThingClient(
         tds=[td],
-        invokers=[
-            LocalInvoker(pump),
-            HttpInvoker(credentials={"bearer_sc": DEVICE_TOKEN}),
-            MqttInvoker(timeout=5),
+        bindings=[
+            LocalBinding(pump),
+            HttpBinding(credentials={"bearer_sc": DEVICE_TOKEN}),
+            MqttBinding(timeout=5),
         ],
         validate=True,
     )

@@ -1,7 +1,9 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """ThingClient: list and invoke a Thing's actions, read/write properties,
 subscribe to events. No LLM.
 
-    client = ThingClient(tds=[td], invokers=[HttpInvoker()])
+    client = ThingClient(tds=[td], bindings=[HttpBinding()])
     client.list_actions()
     await client.invoke("pump.set_speed", {"rpm": 1200})
 """
@@ -11,7 +13,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from thingctx.invokers import HttpInvoker, Invoker, LocalInvoker, select_invoker
+from thingctx.bindings import BindingRegistry, ProtocolBinding, default_bindings
+from thingctx.bindings.builtin.media import is_media_form
 from thingctx.thing import (
     WoTAction,
     WoTThing,
@@ -33,16 +36,16 @@ class ThingClient:
     agnostic; no LLM."""
 
     @classmethod
-    def from_registry(cls, registry, *, invokers=None, **kwargs) -> ThingClient:
+    def from_registry(cls, registry, *, bindings=None, **kwargs) -> ThingClient:
         """Build a client over every TD a registry yields. `registry` is
         anything with fetch() -> list[dict] (see thingctx.registry)."""
-        return cls(tds=registry.fetch(), invokers=invokers, **kwargs)
+        return cls(tds=registry.fetch(), bindings=bindings, **kwargs)
 
     def __init__(
         self,
         *,
         tds: list[dict[str, Any]],
-        invokers: list[Invoker] | None = None,
+        bindings: BindingRegistry | list[ProtocolBinding] | None = None,
         only_idempotent: bool = False,
         validate: bool = False,
         approve: Approver | None = None,
@@ -58,11 +61,18 @@ class ThingClient:
         self._approve = approve
         self._approve_when: ApprovePolicy = approve_when
         self._things: list[WoTThing] = [parse_thing(td, validate=validate) for td in tds]
-        # Default to HTTP + local so the documented quickstart (consume a TD,
-        # then invoke) routes without manual wiring; matches from_url. Pass
-        # invokers=[] explicitly for a client that registers none, or add
-        # MQTT/others as needed.
-        self._invokers = list(invokers) if invokers is not None else [HttpInvoker(), LocalInvoker()]
+        # Bindings resolve a form to a transport. ``bindings`` is a
+        # BindingRegistry or a plain list; an explicitly supplied binding
+        # shadows a built-in for its scheme. When none is given, default to
+        # http + local so the documented quickstart routes without wiring; pass
+        # an empty list for a client that registers none.
+        if isinstance(bindings, BindingRegistry):
+            self._registry = bindings
+        elif bindings is not None:
+            self._registry = BindingRegistry(list(bindings))
+        else:
+            self._registry = BindingRegistry(default_bindings())
+        self._bindings = self._registry.bindings
         self._tool_specs, self._route = actions_to_tools(
             self._things,
             only_idempotent=only_idempotent,
@@ -78,25 +88,39 @@ class ThingClient:
                 self._props[_tool_name(thing.id, p.name)] = p
             for e in thing.events.values():
                 self._events[_tool_name(thing.id, e.name)] = e
-        # Bind the TDs' declared security to any invoker that honors it, so
+        # Bind the TDs' declared security to any binding that honors it, so
         # requests carry the right auth without the adopter wiring it. A
-        # fleet-aware invoker (with_things) authenticates each call as its
+        # fleet-aware binding (with_things) authenticates each call as its
         # owning Thing; otherwise fall back to the first Thing's schemes.
-        for inv in self._invokers:
+        for inv in self._bindings:
             if hasattr(inv, "with_things"):
                 inv.with_things(self._things)
             elif hasattr(inv, "with_security") and self._things:
                 inv.with_security(self._things[0])
 
-        # Preferred transport order = the order invokers were given.
+        # Preferred transport order = the order bindings were given.
         self._prefer = tuple(
-            s for inv in self._invokers for s in (getattr(inv, "schemes", None) or (inv.scheme,))
+            s for inv in self._bindings for s in (getattr(inv, "schemes", None) or (inv.scheme,))
         )
 
+        # Media affordances are continuous streams, not request/response: they
+        # are consumed via frames(), never invoke(). Split them out of the
+        # invoke route and the LLM tool specs so a tool-calling loop never tries
+        # to invoke() one; expose them through list_media()/frames() instead.
+        self._media: dict[str, WoTAction] = {}
+        for name, action in list(self._route.items()):
+            if any(is_media_form(f) for f in action.forms):
+                self._media[name] = action
+                del self._route[name]
+        if self._media:
+            self._tool_specs = [
+                s for s in self._tool_specs if s.get("function", {}).get("name") not in self._media
+            ]
+
     async def aclose(self) -> None:
-        """Release any pooled transport resources (e.g. an invoker's reused
+        """Release any pooled transport resources (e.g. an binding's reused
         HTTP client). Safe to call more than once."""
-        for inv in self._invokers:
+        for inv in self._bindings:
             closer = getattr(inv, "aclose", None)
             if closer is not None:
                 await closer()
@@ -141,6 +165,11 @@ class ThingClient:
         """Invoke one action by routing to the transport its form names.
         ``arguments`` defaults to ``{}`` (for no-input actions)."""
         arguments = arguments or {}
+        if tool_name in self._media:
+            return {
+                "error": f"{tool_name} is a media stream; consume it with client.frames(...)",
+                "media": True,
+            }
         action = self._route.get(tool_name)
         if action is None:
             return {"error": f"unknown action: {tool_name}"}
@@ -152,11 +181,11 @@ class ThingClient:
         form = action.primary_form(prefer=self._prefer)
         if form is None:
             return {"error": f"action {tool_name} has no form (no transport)"}
-        invoker = select_invoker(self._invokers, form)
-        if invoker is None:
+        binding = self._registry.resolve(form)
+        if binding is None:
             return {
                 "error": (
-                    f"no invoker for transport {form.scheme!r} (action {tool_name}); register one"
+                    f"no binding for transport {form.scheme!r} (action {tool_name}); register one"
                 ),
                 "transport": form.scheme,
             }
@@ -165,7 +194,7 @@ class ThingClient:
 
         href, rest = form.fill(arguments or {})
         filled = dataclasses.replace(form, href=href) if href != form.href else form
-        return await invoker.invoke(action, filled, rest)
+        return await binding.invoke(action, filled, rest)
 
     def list_properties(self) -> list[str]:
         return list(self._props)
@@ -173,16 +202,29 @@ class ThingClient:
     def list_events(self) -> list[str]:
         return list(self._events)
 
+    def list_media(self) -> list[str]:
+        """Names of media affordances (continuous audio/video streams). Consume
+        them with frames(); they are not in list_actions()."""
+        return list(self._media)
+
+    def media_form(self, name: str):
+        """The media form backing a media affordance, or None. Lets callers read
+        the form's media hint (e.g. a snapshot default) without reaching in."""
+        action = self._media.get(name)
+        if action is None:
+            return None
+        return next((f for f in action.forms if is_media_form(f)), None)
+
     async def read_property(self, name: str) -> Any:
         """Read a property's current value."""
         prop = self._props.get(name)
         if prop is None:
             return {"error": f"unknown property: {name}"}
         form = prop.primary_form(prefer=self._prefer)
-        invoker = select_invoker(self._invokers, form) if form else None
-        if invoker is None or not hasattr(invoker, "read"):
+        binding = self._registry.resolve(form) if form else None
+        if binding is None or not hasattr(binding, "read"):
             return {"error": f"no readable transport for property {name}"}
-        return await invoker.read(prop, form)
+        return await binding.read(prop, form)
 
     async def write_property(self, name: str, value: Any) -> Any:
         """Write a property's value. Read-only properties are rejected."""
@@ -197,10 +239,10 @@ class ThingClient:
         if blocked is not None:
             return blocked
         form = prop.primary_form(prefer=self._prefer)
-        invoker = select_invoker(self._invokers, form) if form else None
-        if invoker is None or not hasattr(invoker, "write"):
+        binding = self._registry.resolve(form) if form else None
+        if binding is None or not hasattr(binding, "write"):
             return {"error": f"no writable transport for property {name}"}
-        return await invoker.write(prop, form, value)
+        return await binding.write(prop, form, value)
 
     async def subscribe(self, name: str):
         """Subscribe to an event or observable property. Returns an async
@@ -213,11 +255,64 @@ class ThingClient:
         if target is None:
             return _empty_aiter(f"unknown event/property: {name}")
         form = target.primary_form(prefer=self._prefer)
-        invoker = select_invoker(self._invokers, form) if form else None
-        if invoker is None or not hasattr(invoker, "subscribe"):
+        binding = self._registry.resolve(form) if form else None
+        if binding is None or not hasattr(binding, "subscribe"):
             return _empty_aiter(f"no subscribable transport for {name}")
         bare = target.name
-        return await invoker.subscribe(bare, form)
+        return await binding.subscribe(bare, form)
+
+    async def frames(
+        self,
+        name: str,
+        arguments: dict[str, Any] | None = None,
+        *,
+        track: str = "video",
+    ):
+        """Open a media affordance and yield decoded frames. Returns an async
+        iterator; ``track`` selects video or audio.
+
+            async for frame in await client.frames("cam-1.watch"):
+                ...
+        """
+        action = self._media.get(name)
+        if action is None:
+            return _empty_aiter(f"unknown media affordance: {name}")
+        form = next((f for f in action.forms if is_media_form(f)), None)
+        binding = self._registry.resolve(form) if form else None
+        if binding is None or not hasattr(binding, "frames"):
+            return _empty_aiter(f"no media transport for {name}; register MediaBinding")
+        import dataclasses
+
+        href, rest = form.fill(arguments or {})
+        filled = dataclasses.replace(form, href=href) if href != form.href else form
+        return binding.frames(action, filled, rest, track=track)
+
+    async def publish(
+        self,
+        name: str,
+        frames,
+        arguments: dict[str, Any] | None = None,
+        *,
+        track: str = "video",
+    ) -> None:
+        """Push an async iterator of frames to a media affordance's ingest
+        target (a URL or a file). The outbound mirror of ``frames()``; returns
+        when the source is exhausted.
+
+            await client.publish("studio.broadcast", frame_source())
+        """
+        action = self._media.get(name)
+        if action is None:
+            raise KeyError(f"unknown media affordance: {name}")
+        form = next((f for f in action.forms if is_media_form(f)), None)
+        binding = self._registry.resolve(form) if form else None
+        if binding is None or not hasattr(binding, "publish"):
+            raise RuntimeError(f"no media transport for {name}; register MediaBinding")
+        import dataclasses
+
+        href, rest = form.fill(arguments or {})
+        filled = dataclasses.replace(form, href=href) if href != form.href else form
+        await binding.publish(action, filled, frames, rest, track=track)
 
     async def verify(self, thing_id: str | None = None) -> list[VerifyReport]:
         """Ground each Thing's TD against the live endpoint: read every

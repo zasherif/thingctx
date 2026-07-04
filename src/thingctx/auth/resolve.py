@@ -1,7 +1,9 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """The shared resolution primitive: turn an owner's active schemes + secrets into
 neutral credential material, transport-agnostically.
 
-Both HttpInvoker and MqttInvoker (and any future transport) call this -- it is
+Both HttpBinding and MqttBinding (and any future transport) call this; it is
 the single place that walks an owner's declared security, looks up the matching
 provider, and resolves each into a :class:`Credential`. The caller then hands
 the list to its transport applier (``apply_http`` / ``apply_mqtt`` / ...). No
@@ -35,7 +37,7 @@ async def resolve_credentials(
 
     ``active`` are the scheme names declared as active; ``schemes`` maps name ->
     a security-scheme object; ``credential_for(name)`` returns the runtime secret
-    for that scheme (the invoker decides how it is keyed). Returns the list of
+    for that scheme (the binding decides how it is keyed). Returns the list of
     non-empty :class:`Credential` material, in declaration order.
     """
     cache = cache if cache is not None else {}

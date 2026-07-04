@@ -1,17 +1,21 @@
-"""HttpInvoker: drive a Thing over http(s)."""
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
+"""HttpBinding: drive a Thing over http(s)."""
 
 from __future__ import annotations
 
 from thingctx.auth import AuthRegistry, AuthStrategy, apply_http
-from thingctx.invokers.base import _AuthBinding, _decode
+from thingctx.bindings.base import AuthMixin, ProtocolBinding, _decode
+from thingctx.contracts import implements
 
 
-class HttpInvoker(_AuthBinding):
+@implements(ProtocolBinding)
+class HttpBinding(AuthMixin):
     """POST the action input as JSON to the form's http(s) URL.
 
     Honors declared security via the transport-neutral auth layer: it resolves
     each owner's schemes into neutral credential material (see
-    :class:`_AuthBinding`) and maps it onto the request with ``apply_http`` --
+    :class:`AuthMixin`) and maps it onto the request with ``apply_http`` --
     headers, query params, a client certificate, or request signing. No auth
     logic lives in this transport.
 
@@ -52,16 +56,17 @@ class HttpInvoker(_AuthBinding):
         # One pooled AsyncClient, created lazily inside the running loop and
         # reused across calls so connections (and TLS handshakes) stay warm.
         self._client = None
-        # This invoker also claims https.
+        # This binding also claims https.
         self.schemes = ("http", "https")
 
-    async def _prepare(self, owner_id: str | None = None):
+    async def _prepare(self, owner_id: str | None = None, form=None):
         """Resolve the owner's credentials and map them onto HTTP.
 
         Returns ``(headers, params, signers, cert)``: headers/params to merge
         before the request is built, signers to run on the assembled request,
-        and an optional client-level mTLS ``cert``."""
-        creds = await self._resolve_credentials(owner_id)
+        and an optional client-level mTLS ``cert``. A form may carry its own
+        security, which overrides the owner's for that affordance."""
+        creds = await self._resolve_credentials(owner_id, form)
         plan = apply_http(creds, base_headers=self._headers)
         return plan.headers, plan.params, plan.signers, plan.cert
 
@@ -91,7 +96,7 @@ class HttpInvoker(_AuthBinding):
             await self._client.aclose()
         self._client = None
 
-    async def __aenter__(self) -> HttpInvoker:
+    async def __aenter__(self) -> HttpBinding:
         return self
 
     async def __aexit__(self, *exc) -> None:
@@ -150,7 +155,8 @@ class HttpInvoker(_AuthBinding):
                 await client.aclose()
 
     async def invoke(self, action, form, arguments):  # noqa: ANN001
-        headers, params, signers, cert = await self._prepare(getattr(action, "thing_id", None))
+        owner = getattr(action, "thing_id", None)
+        headers, params, signers, cert = await self._prepare(owner, form)
         # HTTP binding: honor the form's declared method, else default by
         # safety. Idempotent (safe) actions GET with args as query params;
         # others POST with a JSON body.
@@ -178,7 +184,7 @@ class HttpInvoker(_AuthBinding):
 
     async def read(self, prop, form):  # noqa: ANN001
         """GET the property's current value from its form URL."""
-        headers, params, signers, cert = await self._prepare(getattr(prop, "thing_id", None))
+        headers, params, signers, cert = await self._prepare(getattr(prop, "thing_id", None), form)
         return await self._send(
             "GET", form.href, signers=signers, cert=cert, headers=headers, params=params
         )
@@ -186,7 +192,7 @@ class HttpInvoker(_AuthBinding):
     async def write(self, prop, form, value):  # noqa: ANN001
         """PUT the new value to the property's form URL (the ``writeproperty``
         HTTP binding default)."""
-        headers, params, signers, cert = await self._prepare(getattr(prop, "thing_id", None))
+        headers, params, signers, cert = await self._prepare(getattr(prop, "thing_id", None), form)
         return await self._send(
             "PUT",
             form.href,
@@ -206,7 +212,7 @@ class HttpInvoker(_AuthBinding):
 
         import httpx
 
-        headers, params, signers, cert = await self._prepare()
+        headers, params, signers, cert = await self._prepare(None, form)
 
         async def _stream():
             async with httpx.AsyncClient(timeout=None, cert=cert) as client:

@@ -1,9 +1,11 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """HTTP applier: map neutral credential material onto an HTTP request.
 
 This is the only place that knows how each :class:`Credential` kind attaches to
-HTTP -- bearer/basic to ``Authorization``, apikey to a header or query param,
+HTTP: bearer/basic to ``Authorization``, apikey to a header or query param,
 mTLS to the client ``cert``, a ``SignatureCredential`` to a request signer chosen
-by its ``algorithm``, a custom ``RequestSigner`` to a signer. The invoker just
+by its ``algorithm``, a custom ``RequestSigner`` to a signer. The binding just
 executes the returned plan; it holds no auth logic. Kinds that have no HTTP
 meaning (``EnhancedAuth``) are ignored.
 """
@@ -30,16 +32,27 @@ from thingctx.auth.sigv4 import _region_service, sigv4_sign
 __all__ = ["HttpAuthPlan", "apply_http", "register_signer"]
 
 
-@dataclass
+@dataclass(repr=False)
 class HttpAuthPlan:
     """How to authenticate one HTTP request: headers/params merged before the
     request is built, signers run on the assembled request, and an optional
-    client-level ``cert`` (mutual TLS)."""
+    client-level ``cert`` (mutual TLS).
+
+    Carries plaintext (an ``Authorization`` header, an API key) only at the point
+    of use; its ``repr`` masks those values so it is safe to log."""
 
     headers: dict = field(default_factory=dict)
     params: dict = field(default_factory=dict)
     signers: list = field(default_factory=list)  # Callable[[request], Any]
     cert: Any = None  # httpx 'cert=' value
+
+    def __repr__(self) -> str:
+        # Header and param values and the cert can hold secrets; names and flags only.
+        return (
+            f"HttpAuthPlan(headers={sorted(self.headers)!r}, "
+            f"params={sorted(self.params)!r}, signers={len(self.signers)}, "
+            f"cert={'***' if self.cert else None})"
+        )
 
 
 def _httpx_cert(c: ClientCertificate) -> Any:

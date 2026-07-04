@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """01: the MCP baseline. The head-to-head partner to 02.
 
 The MCP server here is a proxy. It reaches the pump over the SAME real

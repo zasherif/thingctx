@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """A generic MCP server over a registry of WoT Things.
 
 A registry is anything that yields TDs: a folder, a URL, or a W3C Thing
@@ -36,7 +38,7 @@ def _credentials_from_env() -> dict[str, str]:
     ``THINGCTX_TOKEN_GOOGLE_MAPS`` -> ``google-maps``). The slug is the same
     one used in tool names. The secret is applied per the Thing's declared
     scheme (bearer/basic/apikey). Secrets live only in the process
-    environment -- never in a TD or on disk here.
+    environment, never in a TD or on disk here.
     """
     prefix = "THINGCTX_TOKEN_"
     creds: dict[str, str] = {}
@@ -57,7 +59,7 @@ def _elicit_approver(server):
     async def approve(req) -> bool:
         try:
             session = server.request_context.session
-        except Exception:  # noqa: BLE001 , no active request/session
+        except Exception:  # noqa: BLE001  (no active request/session)
             return False
         message = f"Approve {req.tool_name}({req.arguments})?  Reason: {req.reason}." + (
             f"  {req.description}" if req.description else ""
@@ -67,7 +69,7 @@ def _elicit_approver(server):
             result = await session.elicit(
                 message=message, requestedSchema={"type": "object", "properties": {}}
             )
-        except Exception:  # noqa: BLE001 , client has no elicitation capability
+        except Exception:  # noqa: BLE001  (client has no elicitation capability)
             return False
         return getattr(result, "action", None) == "accept"
 
@@ -103,6 +105,16 @@ def build_mcp_server(
     elif approve_when is not None:
         client.set_approval(client._approve, approve_when=approve_when)
 
+    # Map each media affordance (``<slug>.<name>``) to a ``<slug>.snapshot`` MCP
+    # tool name, disambiguating the rare Thing with several media streams.
+    media_tools: dict[str, str] = {}  # mcp tool name -> media affordance name
+    for media_name in client.list_media():
+        slug = media_name.split(".", 1)[0]
+        tool_name = f"{slug}.snapshot"
+        if tool_name in media_tools:
+            tool_name = f"{media_name}.snapshot"
+        media_tools[tool_name] = media_name
+
     # actions -> tools, carrying MCP annotations so a client can gate or
     # label them. The common hints are derived from the TD's own
     # semantics; a `tc:mcp` block on the action passes any MCP annotation
@@ -133,10 +145,96 @@ def build_mcp_server(
                     annotations=ann,
                 )
             )
+        # Media affordances are continuous streams; MCP can't carry a stream
+        # (and has no video content type), but it can carry images. Each becomes
+        # a read only ``<slug>.snapshot`` tool that returns one still by default,
+        # or a short burst of frames (``frames`` > 1) the model reads as a clip.
+        for tool_name, media_name in media_tools.items():
+            out.append(
+                types.Tool(
+                    name=tool_name,
+                    description=(
+                        f"Capture frames from the {media_name} media stream and "
+                        "return them as images: one still by default, or a short "
+                        "clip (set frames > 1) sampled over time."
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "seconds": {
+                                "type": "number",
+                                "description": "Seconds to seek before the first frame.",
+                            },
+                            "frames": {
+                                "type": "integer",
+                                "description": "How many frames to return (1 = a single still).",
+                                "minimum": 1,
+                            },
+                            "every": {
+                                "type": "number",
+                                "description": "Seconds between sampled frames when frames > 1.",
+                            },
+                        },
+                    },
+                    annotations=types.ToolAnnotations(
+                        readOnlyHint=True, idempotentHint=True, destructiveHint=False
+                    ),
+                )
+            )
         return out
+
+    async def _snapshot(name: str, args: dict):
+        """Grab one frame (or a short burst) from a media affordance and return
+        them as MCP image content."""
+        import base64
+
+        from thingctx.bindings.builtin.media.encode import frame_to_jpeg
+        from thingctx.bindings.builtin.media.sample import sample_frames
+
+        form = client.media_form(name)
+        hint = (getattr(form, "raw", {}) or {}).get("x-thingctx-media") or {}
+        default_at = hint.get("snapshot_at", 0) if isinstance(hint, dict) else 0
+        seconds = float(args.get("seconds", default_at) or 0)
+        count = max(1, int(args.get("frames", 1) or 1))
+        every = float(args.get("every", 1.0) or 1.0)
+
+        if count == 1:
+            frame = None
+            async for fr in await client.frames(name, track="video"):
+                # ``seconds`` is best-effort: a source whose frames carry no pts
+                # (some live streams) would otherwise loop forever waiting for a
+                # timestamp that never arrives, so the first frame ends it.
+                if frame is None and fr.pts is None:
+                    frame = fr
+                    break
+                frame = fr
+                if not seconds or (fr.pts is not None and fr.pts >= seconds):
+                    break
+            picked = [frame] if frame is not None else []
+        else:
+            # Skip ahead to ``seconds`` first, then sample ``count`` frames.
+            async def _from(start: float):
+                async for fr in await client.frames(name, track="video"):
+                    if not start or (fr.pts is not None and fr.pts >= start):
+                        yield fr
+
+            picked = await sample_frames(_from(seconds), count=count, every=every)
+
+        if not picked:
+            return [types.TextContent(type="text", text=f"no frame from {name}")]
+        return [
+            types.ImageContent(
+                type="image",
+                data=base64.b64encode(frame_to_jpeg(fr)).decode("ascii"),
+                mimeType="image/jpeg",
+            )
+            for fr in picked
+        ]
 
     @server.call_tool()
     async def call_tool(tool: str, args: dict):
+        if tool in media_tools:
+            return await _snapshot(media_tools[tool], args or {})
         result = await client.invoke(tool, args or {})
         return [types.TextContent(type="text", text=to_text(result))]
 
@@ -201,26 +299,32 @@ def client_from_registry(
     registry, credentials: dict | None = None, approve_when: str = "declared"
 ) -> ThingClient:
     """Build one ThingClient over all the TDs a registry yields, with the
-    invokers whose deps are installed (local always; http/mqtt if
+    bindings whose deps are installed (local always; http/mqtt if
     importable). `registry` is anything with a fetch() -> list[dict].
     ``approve_when`` sets the trust policy (the MCP server wires the approver)."""
-    from thingctx.invokers import LocalInvoker
+    from thingctx.bindings import LocalBinding
 
     tds = registry.fetch()
-    invokers: list[Any] = [LocalInvoker()]
+    bindings: list[Any] = [LocalBinding()]
     try:
-        from thingctx.invokers import HttpInvoker
+        from thingctx.bindings import HttpBinding
 
-        invokers.append(HttpInvoker(credentials=credentials or {}))
+        bindings.append(HttpBinding(credentials=credentials or {}))
     except Exception:  # noqa: BLE001
         pass
     try:
-        from thingctx.invokers import MqttInvoker
+        from thingctx.bindings import MqttBinding
 
-        invokers.append(MqttInvoker())
+        bindings.append(MqttBinding())
     except Exception:  # noqa: BLE001
         pass
-    return ThingClient(tds=tds, invokers=invokers, approve_when=approve_when)
+    try:
+        from thingctx.bindings.builtin.media import MediaBinding
+
+        bindings.append(MediaBinding())
+    except Exception:  # noqa: BLE001
+        pass
+    return ThingClient(tds=tds, bindings=bindings, approve_when=approve_when)
 
 
 async def serve(registry) -> None:

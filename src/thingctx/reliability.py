@@ -1,4 +1,6 @@
-"""Cheap reliability for HTTP invokers: bounded retries with exponential
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
+"""Cheap reliability for HTTP bindings: bounded retries with exponential
 backoff and jitter, plus one normalized error shape.
 
 A flaky network or a momentarily overloaded device should not surface as a
@@ -98,7 +100,7 @@ async def send_with_retry(
     ``(response, attempts)``; raises ``TransportError`` if every attempt fails
     at the transport level (the caller decides what to do with a bad status).
 
-    ``retries`` overrides ``policy.retries`` for this call -- the invoker passes
+    ``retries`` overrides ``policy.retries`` for this call; the binding passes
     ``0`` for non-idempotent methods so a write is never silently re-sent."""
     import httpx
 

@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """OAuth2 client-credentials: fetch a token, cache it, attach it as bearer."""
 
 from __future__ import annotations
@@ -7,7 +9,7 @@ from types import SimpleNamespace
 import httpx
 import pytest
 
-from thingctx import HttpInvoker, parse_thing
+from thingctx import HttpBinding, parse_thing
 
 TD = {
     "@context": "https://www.w3.org/2022/wot/td/v1.1",
@@ -60,7 +62,7 @@ def _action_form():
 
 async def test_token_fetched_and_attached(mock_http):
     thing = parse_thing(TD)
-    inv = HttpInvoker(
+    inv = HttpBinding(
         credentials={"urn:dev:svc": {"client_id": "cid", "client_secret": "sec"}}
     ).with_security(thing)
     action, form = _action_form()
@@ -73,7 +75,7 @@ async def test_token_fetched_and_attached(mock_http):
 
 async def test_token_is_cached_across_calls(mock_http):
     thing = parse_thing(TD)
-    inv = HttpInvoker(
+    inv = HttpBinding(
         credentials={"urn:dev:svc": {"client_id": "cid", "client_secret": "sec"}}
     ).with_security(thing)
     action, form = _action_form()
@@ -115,7 +117,7 @@ async def test_password_grant_sends_resource_owner_creds(monkeypatch):
         },
     }
     thing = parse_thing(td)
-    inv = HttpInvoker(
+    inv = HttpBinding(
         credentials={
             "urn:dev:svc": {
                 "client_id": "cid",
@@ -140,7 +142,7 @@ async def test_static_token_used_directly(mock_http):
     token (no client-credentials exchange)."""
     td = {**TD, "securityDefinitions": {"oauth": {"scheme": "oauth2"}}}
     thing = parse_thing(td)
-    inv = HttpInvoker(credentials={"urn:dev:svc": "already-a-token"}).with_security(thing)
+    inv = HttpBinding(credentials={"urn:dev:svc": "already-a-token"}).with_security(thing)
     action, form = _action_form()
 
     await inv.invoke(action, form, {})
@@ -169,7 +171,7 @@ async def test_expired_token_is_refetched(monkeypatch):
     )
 
     thing = parse_thing(TD)
-    inv = HttpInvoker(
+    inv = HttpBinding(
         credentials={"urn:dev:svc": {"client_id": "cid", "client_secret": "sec"}}
     ).with_security(thing)
     action, form = _action_form()
@@ -197,7 +199,7 @@ async def test_token_endpoint_failure_propagates(monkeypatch):
     )
 
     thing = parse_thing(TD)
-    inv = HttpInvoker(
+    inv = HttpBinding(
         credentials={"urn:dev:svc": {"client_id": "cid", "client_secret": "bad"}}
     ).with_security(thing)
     action, form = _action_form()

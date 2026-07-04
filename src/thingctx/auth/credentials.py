@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Neutral, transport-agnostic credential material.
 
 The only contract between the auth layer and the transports: a provider resolves

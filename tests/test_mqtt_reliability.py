@@ -1,4 +1,6 @@
-"""MqttInvoker reliability, tested against a fake broker client (no real
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
+"""MqttBinding reliability, tested against a fake broker client (no real
 broker): connect retry/backoff, QoS, re-subscribe on reconnect, reply-timeout
 normalization, and graceful shutdown."""
 
@@ -12,7 +14,7 @@ import pytest
 import thingctx.reliability as reliability
 from thingctx import TransportError, parse_thing
 from thingctx.auth import EnhancedAuth
-from thingctx.invokers import MqttInvoker
+from thingctx.bindings import MqttBinding
 
 
 class _Msg:
@@ -28,7 +30,7 @@ class _Info:
 
 
 class FakeClient:
-    """Mimics the slice of paho's API the invoker uses. ``loop_start`` fires
+    """Mimics the slice of paho's API the binding uses. ``loop_start`` fires
     ``on_connect`` (a simulated CONNACK); ``publish`` optionally delivers a
     reply via ``on_message`` to complete a request/reply call."""
 
@@ -107,7 +109,7 @@ def _enhanced_td():
 async def test_v5_enhanced_auth_properties_reach_connect():
     """End to end on the v5 path: EnhancedAuth material is built into CONNECT
     properties (AuthenticationMethod/Data) and actually handed to the client's
-    connect() through the reliability connect path -- not merely constructed."""
+    connect() through the reliability connect path, not merely constructed."""
     captured: dict = {}
 
     class _V5Fake(FakeClient):
@@ -117,7 +119,7 @@ async def test_v5_enhanced_auth_properties_reach_connect():
 
     thing = parse_thing(_enhanced_td())
     ea = EnhancedAuth(method="K8S-SAT", data=b"sat-token")
-    inv = MqttInvoker(
+    inv = MqttBinding(
         credentials={"urn:dev:x": ea},
         client_factory=lambda: _V5Fake(auto_reply={"ok": True}),
     ).with_security(thing)
@@ -135,7 +137,7 @@ async def test_v5_enhanced_auth_properties_reach_connect():
 
 async def test_invoke_round_trips_reply_at_qos1():
     fake = FakeClient(auto_reply={"ok": True, "rpm": 900})
-    inv = MqttInvoker(client_factory=lambda: fake)
+    inv = MqttBinding(client_factory=lambda: fake)
     action, form = _form()
 
     result = await inv.invoke(action, form, {"rpm": 900})
@@ -148,7 +150,7 @@ async def test_invoke_round_trips_reply_at_qos1():
 
 async def test_connect_is_retried_with_backoff(no_sleep):
     fake = FakeClient(fail_connects=2, auto_reply={"ok": True})
-    inv = MqttInvoker(client_factory=lambda: fake, connect_retries=3, backoff=0.1)
+    inv = MqttBinding(client_factory=lambda: fake, connect_retries=3, backoff=0.1)
     action, form = _form()
 
     result = await inv.invoke(action, form, {})
@@ -164,7 +166,7 @@ async def test_connect_is_retried_with_backoff(no_sleep):
 
 async def test_connect_exhaustion_raises_transport_error(no_sleep):
     fake = FakeClient(fail_connects=99)
-    inv = MqttInvoker(client_factory=lambda: fake, connect_retries=2, backoff=0)
+    inv = MqttBinding(client_factory=lambda: fake, connect_retries=2, backoff=0)
     action, form = _form()
 
     with pytest.raises(TransportError) as ei:
@@ -179,8 +181,8 @@ async def test_connect_exhaustion_raises_transport_error(no_sleep):
 
 async def test_connect_torn_down_and_retried_after_connack_timeout(no_sleep):
     """A CONNACK that never arrives on the first attempt times out, tears the
-    connection fully down (loop_stop + disconnect), then a fresh attempt -- with
-    its own connect event -- succeeds."""
+    connection fully down (loop_stop + disconnect), then a fresh attempt, with
+    its own connect event, succeeds."""
 
     class SlowConnack:
         def __init__(self):
@@ -213,7 +215,7 @@ async def test_connect_torn_down_and_retried_after_connack_timeout(no_sleep):
             return _Info()
 
     fake = SlowConnack()
-    inv = MqttInvoker(
+    inv = MqttBinding(
         client_factory=lambda: fake, connect_retries=2, backoff=0, connect_timeout=0.05
     )
     action, form = _form()
@@ -227,7 +229,7 @@ async def test_connect_torn_down_and_retried_after_connack_timeout(no_sleep):
 
 async def test_reply_timeout_is_normalized():
     fake = FakeClient(auto_reply=None)  # never replies
-    inv = MqttInvoker(client_factory=lambda: fake, timeout=0.05)
+    inv = MqttBinding(client_factory=lambda: fake, timeout=0.05)
     action, form = _form()
 
     with pytest.raises(TransportError) as ei:
@@ -238,10 +240,10 @@ async def test_reply_timeout_is_normalized():
 
 
 async def test_resubscribe_on_reconnect():
-    """paho does not resubscribe after a reconnect; the invoker's on_connect
+    """paho does not resubscribe after a reconnect; the binding's on_connect
     must, so a second CONNACK re-establishes the subscription."""
     fake = FakeClient(auto_reply={"ok": True})
-    inv = MqttInvoker(client_factory=lambda: fake)
+    inv = MqttBinding(client_factory=lambda: fake)
     action, form = _form()
     await inv.invoke(action, form, {})
 
@@ -255,7 +257,7 @@ async def test_resubscribe_on_reconnect():
 
 async def test_invoke_shuts_down_client():
     fake = FakeClient(auto_reply={"ok": True})
-    inv = MqttInvoker(client_factory=lambda: fake)
+    inv = MqttBinding(client_factory=lambda: fake)
     action, form = _form()
 
     await inv.invoke(action, form, {})
@@ -265,7 +267,7 @@ async def test_invoke_shuts_down_client():
 
 async def test_subscribe_streams_and_decodes():
     fake = FakeClient()
-    inv = MqttInvoker(client_factory=lambda: fake, qos=1)
+    inv = MqttBinding(client_factory=lambda: fake, qos=1)
     _action, form = _form("mqtt://broker.local/pump/events")
 
     stream = await inv.subscribe("pump.overheat", form)

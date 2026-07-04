@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Compile an OpenAPI 3.x spec into a W3C WoT Thing Description.
 
 Every OpenAPI operation becomes a TD action carrying a real HTTP form (method

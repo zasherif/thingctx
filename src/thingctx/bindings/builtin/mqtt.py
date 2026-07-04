@@ -1,11 +1,14 @@
-"""MqttInvoker: drive a Thing over mqtt (publish + await a reply)."""
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
+"""MqttBinding: drive a Thing over mqtt (publish + await a reply)."""
 
 from __future__ import annotations
 
 import json
 
 from thingctx.auth import AuthRegistry, AuthStrategy, apply_mqtt
-from thingctx.invokers.base import _AuthBinding
+from thingctx.bindings.base import AuthMixin, ProtocolBinding
+from thingctx.contracts import implements
 
 
 def _decode_mqtt(payload):
@@ -27,13 +30,14 @@ def _connack_ok(rc) -> bool:
     return getattr(rc, "value", None) == 0
 
 
-class MqttInvoker(_AuthBinding):
+@implements(ProtocolBinding)
+class MqttBinding(AuthMixin):
     """Publish the action input to the form's mqtt topic, await a reply.
 
     Built on ``paho-mqtt``. The form's ``href`` is ``mqtt://broker[:port]/<topic>``;
     a request/reply ``invoke`` awaits the reply on ``<topic>/reply``.
 
-    Authentication is the *same* transport-neutral layer the HTTP invoker uses:
+    Authentication is the *same* transport-neutral layer the HTTP binding uses:
     bind resources with ``with_security``/``with_things`` and pass
     ``credentials``; the shared primitive resolves them into neutral material and
     ``apply_mqtt`` maps it onto the CONNECT (username/password, mutual TLS, or v5
@@ -44,7 +48,7 @@ class MqttInvoker(_AuthBinding):
     publishes/subscribes use QoS 1 by default, the subscription is
     **re-established on every reconnect** (paho does not resubscribe for you),
     and connect/reply failures surface as the same ``TransportError`` the HTTP
-    invoker raises. Pass ``client_factory`` to supply your own configured client
+    binding raises. Pass ``client_factory`` to supply your own configured client
     (or a fake, in tests).
     """
 
@@ -146,18 +150,19 @@ class MqttInvoker(_AuthBinding):
         topic = u.path.lstrip("/") or fallback
         return host, port, topic
 
-    async def _apply_auth(self, client, owner_id: str | None):
+    async def _apply_auth(self, client, owner_id: str | None, form=None):
         """Configure an existing client's connection auth from the owner's
         credentials. Returns the ``MqttAuthPlan`` for inspection/testing."""
-        plan = apply_mqtt(await self._resolve_credentials(owner_id))
+        plan = apply_mqtt(await self._resolve_credentials(owner_id, form))
         self._configure_client(client, plan)
         return plan
 
-    async def _connect(self, owner_id: str | None, host: str, port: int):
+    async def _connect(self, owner_id: str | None, host: str, port: int, form=None):
         """Resolve the owner's credentials, build a client of the right protocol,
         and configure its connection auth. Returns ``(client, properties)`` ready
-        to connect -- all auth comes from the shared, transport-neutral layer."""
-        plan = apply_mqtt(await self._resolve_credentials(owner_id))
+        to connect. All auth comes from the shared, transport-neutral layer. A
+        form's own security overrides the owner's for that affordance."""
+        plan = apply_mqtt(await self._resolve_credentials(owner_id, form))
         client = self._new_client(enhanced=plan.enhanced is not None)
         self._configure_client(client, plan)
         return client, self._connect_properties(plan)
@@ -220,7 +225,7 @@ class MqttInvoker(_AuthBinding):
         reply_topic = f"{topic}/reply"
         loop = asyncio.get_running_loop()
         fut: asyncio.Future = loop.create_future()
-        client, props = await self._connect(getattr(action, "thing_id", None), host, port)
+        client, props = await self._connect(getattr(action, "thing_id", None), host, port, form)
 
         def _on_message(_c, _u, msg):  # noqa: ANN001
             payload = _decode_mqtt(msg.payload)
@@ -258,7 +263,7 @@ class MqttInvoker(_AuthBinding):
         host, port, topic = self._endpoint(form, name)
         queue: asyncio.Queue = asyncio.Queue()
         loop = asyncio.get_running_loop()
-        client, props = await self._connect(getattr(form, "thing_id", None), host, port)
+        client, props = await self._connect(getattr(form, "thing_id", None), host, port, form)
 
         def _on_message(_c, _u, msg):  # noqa: ANN001
             loop.call_soon_threadsafe(queue.put_nowait, _decode_mqtt(msg.payload))

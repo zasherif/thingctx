@@ -8,15 +8,21 @@ is decoupled from transport, so one credential drives every protocol.
 
 Three steps, each replaceable:
 
-1. **Provider** — `resolve(scheme, secret)` returns a neutral `Credential`
+1. **Provider**: `resolve(scheme, secret)` returns a neutral `Credential`
    (`BearerToken`, `BasicCredential`, `ApiKeyCredential`, `SignatureCredential`,
-   `ClientCertificate`, …). Token minting (OAuth2, JWT-bearer) happens here.
-2. **Applier** — `apply_http` / `apply_mqtt` map a `Credential` onto one
+   `ClientCertificate`, ...). Token minting (OAuth2, JWT-bearer) happens here.
+2. **Applier**: `apply_http` / `apply_mqtt` map a `Credential` onto one
    transport (a header, query param, username/password, TLS cert, or request
    signer). Material a transport can't express is ignored.
-3. **`resolve_credentials`** — the one primitive every invoker shares to turn a
+3. **`resolve_credentials`**: the one primitive every binding shares to turn a
    Thing's active schemes into `Credential`s. A new transport adds an applier,
    never new auth logic.
+
+Resolution is per affordance, not just per Thing: a `form` may declare its own
+`security`, which overrides the Thing's default for that interaction (WoT
+form-level security). One composite Thing can therefore use a different scheme
+per plane, e.g. a built-in scheme for a control action and a custom one for a
+media stream. With no form-level `security`, the Thing's default applies.
 
 ## Built-in schemes
 
@@ -32,20 +38,25 @@ Three steps, each replaceable:
 
 ## Using it
 
-Pass secrets to the invoker, keyed by Thing id/slug or scheme name:
+Pass secrets to the binding, keyed by Thing id/slug or scheme name:
 
 ```python
-thingctx.HttpInvoker(credentials={"weather": "my-token"})
+thingctx.HttpBinding(credentials={"weather": "my-token"})
 ```
 
 ## Extending it
 
-Register a provider to override a built-in or add a new scheme — no fork. A
-provider implements `matches` and `resolve`, returning a `Credential` (works on
-every transport) or a `RequestSigner` (transport-specific signing):
+Register a provider to override a built-in or add a new scheme, no fork. The
+contract is the `CredentialProvider` protocol (`matches` + `resolve`); inherit the
+public `BaseAuth` for no-op defaults, the same base the built-ins use. A provider
+returns a `Credential` (works on every transport) or a `RequestSigner`
+(transport-specific signing):
 
 ```python
-class HmacAuth(_BaseAuth):
+from thingctx import BaseAuth, CredentialProvider, RequestSigner, implements
+
+@implements(CredentialProvider)
+class HmacAuth(BaseAuth):
     name = "hmac"
     def matches(self, scheme, credential):
         return (getattr(scheme, "raw", {}) or {}).get("x-thingctx-auth") == "hmac"
@@ -53,17 +64,32 @@ class HmacAuth(_BaseAuth):
         return RequestSigner(sign=lambda r: r.headers.__setitem__("X-Sig", ...))
 
 thingctx.register_auth(HmacAuth())                  # global
-thingctx.HttpInvoker(..., extra_auth=[HmacAuth()])  # or per-invoker (wins)
+thingctx.HttpBinding(..., extra_auth=[HmacAuth()])  # or per-binding (wins)
 ```
 
 Providers registered this way are tried before the built-ins. For a new signing
 algorithm, return `SignatureCredential(algorithm="my-alg")` and register the
 signer with `register_signer("my-alg", factory)`.
 
+A provider can also live in a separate, installed package and be discovered the
+same way transports are. Advertise a zero-argument factory under the
+`thingctx.auth` entry-point group, then load them (opt in, since it runs
+third-party code):
+
+```python
+thingctx.discover_auth(register=True)   # find + register every installed provider
+```
+
+```toml
+# in the provider package's pyproject.toml
+[project.entry-points."thingctx.auth"]
+entra-id = "my_pkg:make_provider"
+```
+
 Keep custom-scheme TDs W3C-valid: declare `"scheme": "auto"` plus a namespaced
 hint (`"x-thingctx-auth": "my-scheme"`) and match on
 `scheme.raw["x-thingctx-auth"]` rather than inventing a new `scheme` value.
-See [`examples/06_custom_auth.py`](../examples/06_custom_auth.py).
+See [`examples/13_custom_stack.py`](../examples/13_custom_stack.py).
 
 ## Secrets
 

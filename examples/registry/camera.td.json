@@ -1,0 +1,17 @@
+{
+  "@context": "https://www.w3.org/2022/wot/td/v1.1",
+  "id": "urn:thingctx:cam:sample",
+  "title": "Sample camera",
+  "description": "A camera whose live stream is reached by reference. Over MCP it exposes a snapshot tool that returns one still frame as an image.",
+  "actions": {
+    "watch": {
+      "description": "Capture a still frame from the camera.",
+      "forms": [
+        {
+          "href": "https://media.w3.org/2010/05/sintel/trailer.mp4",
+          "x-thingctx-media": { "container": "mp4", "snapshot_at": 5 }
+        }
+      ]
+    }
+  }
+}

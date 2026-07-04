@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Drive an Eclipse Ditto digital twin with thingctx, using only the TD that
 Ditto generated from a W3C WoT Thing Model.
 
@@ -5,7 +7,7 @@ Ditto is the *producer*: you hand it a Thing Model URL, it stores a twin and,
 on request, emits a conformant W3C TD describing how to talk to that twin over
 its HTTP API (forms, methods, security). thingctx is the *consumer*: it reads
 that TD and turns it into callable properties/actions + LLM tool specs. No
-glue code, no Ditto-specific SDK, no MCP server -- just the description.
+glue code, no Ditto-specific SDK, no MCP server. Just the description.
 
 Run (with Ditto up on :8080 and the TD captured to ditto-generated-td.json):
 
@@ -19,7 +21,7 @@ import json
 import os
 import pathlib
 
-from thingctx.invokers import HttpInvoker
+from thingctx.bindings import HttpBinding
 from thingctx.runtime import ThingClient
 
 TD_PATH = pathlib.Path(__file__).with_name("ditto-generated-td.json")
@@ -33,8 +35,8 @@ async def main() -> None:
     print(f"  security={td['security']}  scheme={td['securityDefinitions']}")
 
     # The TD names the security scheme ("basic_sc"); we supply the secret.
-    http = HttpInvoker(credentials={"basic_sc": CREDS})
-    client = ThingClient(tds=[td], invokers=[http])
+    http = HttpBinding(credentials={"basic_sc": CREDS})
+    client = ThingClient(tds=[td], bindings=[http])
 
     # 1. The Ditto TD -> LLM tool specs, for free.
     print("\nactions exposed as tools:", [t["function"]["name"] for t in client.list_actions()])

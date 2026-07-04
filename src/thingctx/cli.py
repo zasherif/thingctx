@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """The ``thingctx`` command line.
 
     thingctx import openapi <spec> [--out td.json] [--base-url URL] [--id ID]

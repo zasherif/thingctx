@@ -1,19 +1,25 @@
-"""LocalInvoker: drive an in-process callable (or object) as a transport."""
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
+"""LocalBinding: drive an in-process callable (or object) as a transport."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from typing import Any
 
+from thingctx.bindings.base import ProtocolBinding
+from thingctx.contracts import implements
 
-class LocalInvoker:
+
+@implements(ProtocolBinding)
+class LocalBinding:
     """Invoke actions whose form points at an in-process callable.
 
     Pass the callables in one expression, keyed by action name, or an
     object whose methods match the action names::
 
-        LocalInvoker({"set_speed": fn, "status": fn})   # a mapping
-        LocalInvoker(pump_device)                        # an object
+        LocalBinding({"set_speed": fn, "status": fn})   # a mapping
+        LocalBinding(pump_device)                        # an object
 
     Sync and async callables both work (sync ones are awaited for you).
     A form with no scheme (or ``local://name``) routes here. You can also

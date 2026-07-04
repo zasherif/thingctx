@@ -1,10 +1,12 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """AWS SigV4 request signing.
 
 Three layers:
 * structural / property checks on the pure ``sigv4_sign`` (always run),
 * an independent cross-check against botocore's S3 signer (skipped if botocore
-  is absent -- thingctx itself never depends on it),
-* end-to-end wiring through HttpInvoker (the ``aws-sigv4`` scheme produces a
+  is absent, thingctx itself never depends on it),
+* end-to-end wiring through HttpBinding (the ``aws-sigv4`` scheme produces a
   signed request).
 """
 
@@ -16,7 +18,7 @@ import httpx
 import pytest
 
 from thingctx.auth import AwsSigV4Auth, _aws_region_service, sigv4_sign
-from thingctx.invokers import HttpInvoker
+from thingctx.bindings import HttpBinding
 from thingctx.runtime import ThingClient
 
 KEY = "AKIDEXAMPLE"
@@ -152,9 +154,9 @@ def test_canonical_aws_td_is_w3c_valid():
     assert validate_td(_aws_td("sts.amazonaws.com", AWS_SCHEME)) == []
 
 
-async def test_invoker_signs_request_end_to_end():
-    """The aws-sigv4 scheme makes HttpInvoker emit a SigV4-signed request."""
-    http = HttpInvoker(
+async def test_binding_signs_request_end_to_end():
+    """The aws-sigv4 scheme makes HttpBinding emit a SigV4-signed request."""
+    http = HttpBinding(
         credentials={
             "awsthing": {
                 "aws_access_key_id": KEY,
@@ -165,7 +167,7 @@ async def test_invoker_signs_request_end_to_end():
     )
     client = ThingClient(
         tds=[_aws_td("sts.amazonaws.com", AWS_SCHEME)],
-        invokers=[http],
+        bindings=[http],
     )
     action = client.action_for("awsthing.list")
     headers, params, signers, _cert = await http._prepare(action.thing_id)

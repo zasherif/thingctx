@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 # Guard against committing disallowed substrings into this public repo.
 #
 # The list of disallowed substrings is provided out-of-band and is not stored in

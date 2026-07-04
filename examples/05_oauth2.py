@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """A working OAuth2 (client-credentials) flow, end to end and offline.
 
 Starts two real local HTTP endpoints in a background thread:
@@ -95,7 +97,7 @@ class Handler(BaseHTTPRequestHandler):
 def _td(base: str) -> dict:
     """A Thing whose protected action is reached over an oauth2-secured form.
     The TD declares the *scheme and token endpoint*; the secret is supplied to
-    the invoker at runtime, so this document is safe to commit and share."""
+    the binding at runtime, so this document is safe to commit and share."""
     return {
         "@context": [
             "https://www.w3.org/2022/wot/td/v1.1",
@@ -126,11 +128,11 @@ def _td(base: str) -> dict:
 async def run(base: str) -> None:
     td = _td(base)
 
-    # The only place a secret appears: handed to the invoker at runtime, keyed
+    # The only place a secret appears: handed to the binding at runtime, keyed
     # by the Thing id. The TD itself carries no credential.
     creds = {"client_id": CLIENT_ID, "client_secret": CLIENT_SECRET}
-    invoker = thingctx.HttpInvoker(credentials={"urn:thingctx:demo-pump": creds})
-    client = thingctx.ThingClient(tds=[td], invokers=[invoker])
+    binding = thingctx.HttpBinding(credentials={"urn:thingctx:demo-pump": creds})
+    client = thingctx.ThingClient(tds=[td], bindings=[binding])
 
     print("actions:", [t["function"]["name"] for t in client.list_actions()])
 
@@ -147,8 +149,8 @@ async def run(base: str) -> None:
 
     # A wrong secret never gets a token, so the protected call is refused.
     bad_creds = {"client_id": CLIENT_ID, "client_secret": "wrong"}
-    bad = thingctx.HttpInvoker(credentials={"urn:thingctx:demo-pump": bad_creds})
-    bad_client = thingctx.ThingClient(tds=[td], invokers=[bad])
+    bad = thingctx.HttpBinding(credentials={"urn:thingctx:demo-pump": bad_creds})
+    bad_client = thingctx.ThingClient(tds=[td], bindings=[bad])
     try:
         await bad_client.invoke("demo-pump.set_speed", {"rpm": 9999})
         raise AssertionError("a bad secret should not have been able to set speed")

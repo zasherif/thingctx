@@ -91,7 +91,7 @@ def approve(req):                      # sync or async; return True to allow
     return input(f"run {req.tool_name}{req.arguments}? [y/N] ").lower() == "y"
 
 client = thingctx.ThingClient(
-    tds=[td], invokers=[...], approve=approve, approve_when="declared")
+    tds=[td], bindings=[...], approve=approve, approve_when="declared")
 
 await client.invoke("pump.estop")      # asks approve() first; if denied, never runs
 ```
@@ -190,15 +190,15 @@ consumer. Reproduce with `python examples/_measure.py`.
 
 ## Interoperability
 
-thingctx consumes a Thing Description whoever wrote it — including TDs emitted
+thingctx consumes a Thing Description no matter who wrote it, including TDs emitted
 by standards-compliant producers, not just hand-written ones. Two demos under
 [`examples/interop/`](examples/interop/) prove it end to end:
 
-- [**node-wot**](examples/interop/nodewot/) — the
+- [**node-wot**](examples/interop/nodewot/): the
   [W3C WoT reference implementation](https://github.com/eclipse-thingweb/node-wot)
   exposes a `counter` Thing; thingctx fetches its served TD and drives it
   (read, increment, read) with no node-wot client in the loop.
-- [**Eclipse Ditto**](examples/interop/ditto/) — Ditto generates a TD for a
+- [**Eclipse Ditto**](examples/interop/ditto/): Ditto generates a TD for a
   digital twin; thingctx consumes it and round-trips twin state straight
   through Ditto's API.
 
@@ -271,12 +271,12 @@ compliant TDD. Point `from_arg` at its URL.
 ### Authentication
 
 The TD declares the scheme (`bearer`, `basic`, `apikey`); the secret is
-supplied to the invoker at runtime, never in the TD, so a TD is safe to commit
+supplied to the binding at runtime, never in the TD, so a TD is safe to commit
 and share. Secrets are keyed by Thing id, then slug, then scheme name, so one
 client can carry a different secret per Thing.
 
 ```python
-thingctx.HttpInvoker(credentials={"weather": "secret"})  # by Thing id/slug, or scheme name
+thingctx.HttpBinding(credentials={"weather": "secret"})  # by Thing id/slug, or scheme name
 ```
 
 ## License

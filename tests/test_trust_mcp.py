@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """The trust gate holds over the MCP bridge (the Claude/Copilot CLI path):
 call_tool routes through ThingClient.invoke, so risky tools are gated there
 too. Plus a unit check of the elicitation approver's accept/deny/fallback."""
@@ -8,7 +10,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from thingctx import LocalInvoker, ThingClient
+from thingctx import LocalBinding, ThingClient
 
 TD = {
     "@context": ["https://www.w3.org/2022/wot/td/v1.1", {"tc": "https://thingctx.dev/vocab#"}],
@@ -24,7 +26,7 @@ TD = {
 
 
 def _inv():
-    return LocalInvoker({"status": lambda: {"ok": True}, "wipe": lambda: {"wiped": True}})
+    return LocalBinding({"status": lambda: {"ok": True}, "wipe": lambda: {"wiped": True}})
 
 
 async def _call(server, tool, args=None):
@@ -41,7 +43,7 @@ async def test_mcp_blocks_declared_destructive_when_denied():
     pytest.importorskip("mcp")
     from thingctx.integrations.mcp import build_mcp_server
 
-    server = build_mcp_server(ThingClient(tds=[TD], invokers=[_inv()]), approve=lambda req: False)
+    server = build_mcp_server(ThingClient(tds=[TD], bindings=[_inv()]), approve=lambda req: False)
     assert "approval denied" in await _call(server, "vault.wipe")
 
 
@@ -50,7 +52,7 @@ async def test_mcp_allows_declared_destructive_when_approved():
     pytest.importorskip("mcp")
     from thingctx.integrations.mcp import build_mcp_server
 
-    server = build_mcp_server(ThingClient(tds=[TD], invokers=[_inv()]), approve=lambda req: True)
+    server = build_mcp_server(ThingClient(tds=[TD], bindings=[_inv()]), approve=lambda req: True)
     assert "wiped" in await _call(server, "vault.wipe")
 
 
@@ -61,7 +63,7 @@ async def test_mcp_safe_action_not_gated():
 
     seen = []
     server = build_mcp_server(
-        ThingClient(tds=[TD], invokers=[_inv()]), approve=lambda req: seen.append(1) or False
+        ThingClient(tds=[TD], bindings=[_inv()]), approve=lambda req: seen.append(1) or False
     )
     assert "ok" in await _call(server, "vault.status")  # idempotent -> never gated
     assert seen == []
@@ -73,7 +75,7 @@ async def test_default_elicit_keeps_existing_approver():
     from thingctx.integrations.mcp import build_mcp_server
 
     own = lambda req: True  # noqa: E731
-    client = ThingClient(tds=[TD], invokers=[_inv()], approve=own)
+    client = ThingClient(tds=[TD], bindings=[_inv()], approve=own)
     build_mcp_server(client)  # default approve="elicit" must not clobber it
     assert client._approve is own
     assert "wiped" in await _call(build_mcp_server(client), "vault.wipe")
