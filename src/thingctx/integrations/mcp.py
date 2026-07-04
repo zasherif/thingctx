@@ -201,6 +201,12 @@ def build_mcp_server(
         if count == 1:
             frame = None
             async for fr in await client.frames(name, track="video"):
+                # ``seconds`` is best-effort: a source whose frames carry no pts
+                # (some live streams) would otherwise loop forever waiting for a
+                # timestamp that never arrives, so the first frame ends it.
+                if frame is None and fr.pts is None:
+                    frame = fr
+                    break
                 frame = fr
                 if not seconds or (fr.pts is not None and fr.pts >= seconds):
                     break
