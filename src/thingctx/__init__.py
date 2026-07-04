@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Consume a WoT Thing Description and drive the Thing over any transport.
 
 Parse a TD, present its actions as tools, and invoke each over the

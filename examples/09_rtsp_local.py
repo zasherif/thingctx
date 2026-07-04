@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """09, authenticated RTSP, end to end and fully local: an RTSP server that
 requires a username and password, consumed with thingctx.
 

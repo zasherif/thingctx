@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """The core: parse a TD, invoke/read/write/subscribe over a local binding."""
 
 from __future__ import annotations

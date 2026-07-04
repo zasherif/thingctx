@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """10, a vision model over a clip: 08, but several frames over time.
 
 08 showed one frame; a single still can't show motion. Image-only models (and

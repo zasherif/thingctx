@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """OAuth2 client-credentials: fetch a token, cache it, attach it as bearer."""
 
 from __future__ import annotations

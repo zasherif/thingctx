@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """A real stdio MCP server for the pump, reusing 01's build_server, so the
 measurement can spawn it as a separate process and time a true MCP cold
 start (process + import + handshake), not the in-memory shortcut.

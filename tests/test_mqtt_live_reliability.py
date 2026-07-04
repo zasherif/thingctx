@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Live MQTT reliability against a real broker (e.g. a local Mosquitto).
 
 These complement the fake-broker logic tests with a real wire round-trip:

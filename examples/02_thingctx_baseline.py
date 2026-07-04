@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """02, thingctx baseline: the same pump as 01, the WoT programming model.
 
 This is the head-to-head with 01 (MCP). Same device, same capabilities,

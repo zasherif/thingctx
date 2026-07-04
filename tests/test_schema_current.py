@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """The bundled TD 1.1 schema must stay byte-identical to the official W3C
 validation schema. This is the drift tripwire: if W3C republishes, this
 fails so the bundled copy gets refreshed instead of silently going stale.

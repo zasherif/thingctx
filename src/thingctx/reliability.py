@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Cheap reliability for HTTP bindings: bounded retries with exponential
 backoff and jitter, plus one normalized error shape.
 

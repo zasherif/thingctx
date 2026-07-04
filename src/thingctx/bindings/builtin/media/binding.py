@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Media binding: pull frames from a stream, or push frames to one.
 
 The continuous-binary plane (audio/video), distinct from the request/response

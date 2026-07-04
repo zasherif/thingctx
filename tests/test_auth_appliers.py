@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """The neutral contract in action: providers resolve secrets into Credential
 material, and per-transport appliers map that material onto HTTP and MQTT.
 

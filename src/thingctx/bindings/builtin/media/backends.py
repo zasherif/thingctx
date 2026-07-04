@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Blocking media backends for :class:`~thingctx.bindings.builtin.media.MediaBinding`.
 
 Each backend opens a source and yields decoded :class:`Frame` objects. They run

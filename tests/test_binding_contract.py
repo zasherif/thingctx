@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """The binding contract: built-ins conform, an adopter can replace one or add a
 new protocol, and the runtime routes through the registry either way."""
 

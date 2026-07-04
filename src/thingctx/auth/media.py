@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Media applier: map neutral credential material onto a media source.
 
 The media plane has two engines (a decoder and a page extractor), so this

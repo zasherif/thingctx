@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """A working OAuth2 (client-credentials) flow, end to end and offline.
 
 Starts two real local HTTP endpoints in a background thread:

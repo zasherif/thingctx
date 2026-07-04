@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Per-Thing auth resolution for HttpBinding.
 
 A multi-Thing client shares one HttpBinding, so each request must

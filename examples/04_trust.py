@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """04, trust: the safety layer that protects against a wrong decision , by a
 human, by an LLM, or by an MCP client (Claude / Copilot CLI).
 

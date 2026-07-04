@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """The simulated pump the demos drive. Reachable in-process (local forms),
 over a real HTTP server with an SSE event stream (http forms), and over a
 real MQTT broker (the set_coolant action).

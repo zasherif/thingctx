@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """08, thingctx + a vision model: 03's pattern, now with an image.
 
 03 let an LLM drive a Thing's actions. 08 is the same wiring (`from_td(...,

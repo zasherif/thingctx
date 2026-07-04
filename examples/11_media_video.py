@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """11, native video: hand the model the clip itself, not stills.
 
 10 sent a strip of frames; the model never saw true motion or heard audio. A few

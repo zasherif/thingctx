@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """HTTP applier: map neutral credential material onto an HTTP request.
 
 This is the only place that knows how each :class:`Credential` kind attaches to

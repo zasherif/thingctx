@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """HttpBinding: drive a Thing over http(s)."""
 
 from __future__ import annotations

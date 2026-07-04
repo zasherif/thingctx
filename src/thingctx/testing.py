@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Conformance kit for the thingctx extension contracts.
 
 Run these checks against any extension, built-in or third party, to prove it

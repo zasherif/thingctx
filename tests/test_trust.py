@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Trust layer: approval gating + verify() grounding, over LocalBinding."""
 
 from __future__ import annotations

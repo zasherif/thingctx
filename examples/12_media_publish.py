@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """12, the publish (produce) path: thingctx pushes frames out to a media target.
 
 The reverse of consuming a camera. A producer yields frames on the event loop;

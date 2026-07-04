@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Wiring tests: media routing precedence, ThingClient.frames(), the media /
 invoke split, and LLMHost.see() image handoff. All offline (fake backend, fake
 chat_fn); no network, no real model."""

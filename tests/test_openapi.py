@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """from_openapi: compile an OpenAPI 3.x spec into a drivable WoT TD."""
 
 from __future__ import annotations

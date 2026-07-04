@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Transport-neutral authentication for thingctx.
 
 The layer is split cleanly in two so auth never leaks into a transport:

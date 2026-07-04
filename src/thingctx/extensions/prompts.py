@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """tc:PromptTemplate: a prompt template, declared as an action annotated
 @type "tc:PromptTemplate". Its input is the template arguments; expanding
 it yields a list of {role, content} messages.

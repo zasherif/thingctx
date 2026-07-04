@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Credentials must never render their secrets. These tests guard the redacting
 repr on Credential and catch any future subclass that forgets to inherit it."""
 

@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """The binding registry: how the built-in bindings are assembled and how an
 adopter replaces one or adds a new protocol.
 

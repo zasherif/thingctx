@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Media auth tests: the applier's credential to engine mapping, and end to end
 resolution of an owning Thing's declared security through MediaBinding. All
 offline (fake backend, no network, no codecs)."""

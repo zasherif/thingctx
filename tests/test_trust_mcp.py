@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """The trust gate holds over the MCP bridge (the Claude/Copilot CLI path):
 call_tool routes through ThingClient.invoke, so risky tools are gated there
 too. Plus a unit check of the elicitation approver's accept/deny/fallback."""

@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """A generic MCP server over a registry of WoT Things.
 
 A registry is anything that yields TDs: a folder, a URL, or a W3C Thing

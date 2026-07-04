@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """07, the media plane: consume a Thing's audio/video, end to end, from a TD.
 
 A media affordance is a Thing's continuous audio/video stream. Its form points at

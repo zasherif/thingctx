@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 # Reproduce the Ditto-generated TD fixture from scratch.
 #
 # Prereqs: Docker running. Brings up the Eclipse Ditto docker-compose stack,

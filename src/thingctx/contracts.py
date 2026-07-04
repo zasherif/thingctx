@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """``@implements``: an opt-in, readable way to bind a class to one or more
 thingctx contracts and fail loudly at import time if it does not satisfy them.
 

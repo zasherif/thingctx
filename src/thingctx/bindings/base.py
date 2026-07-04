@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Shared binding plumbing: the ``ProtocolBinding`` contract and its capability
 protocols, response decoding, the per-owner security mixin, and selection.
 

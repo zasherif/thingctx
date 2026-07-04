@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Drive an Eclipse Ditto digital twin with thingctx, using only the TD that
 Ditto generated from a W3C WoT Thing Model.
 

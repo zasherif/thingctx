@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """The MCP bridge: a TD becomes MCP tools, callable over a real session."""
 
 from __future__ import annotations

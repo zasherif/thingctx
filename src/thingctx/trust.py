@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Trust + grounding.
 
 Two safety primitives a consumer needs before it lets an agent drive a Thing:

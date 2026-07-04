@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """ThingClient: list and invoke a Thing's actions, read/write properties,
 subscribe to events. No LLM.
 

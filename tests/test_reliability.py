@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """HttpBinding reliability + chaos.
 
 Two layers of testing here:

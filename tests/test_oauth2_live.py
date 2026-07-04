@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """OAuth2 against a real local server (no mocked transport).
 
 The other OAuth2 tests use httpx.MockTransport to assert logic. This one runs a

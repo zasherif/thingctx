@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Encode a decoded video :class:`Frame` to a portable image.
 
 Used to hand a frame to a vision model (VLM) as an ``image_url`` data URL.

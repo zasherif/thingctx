@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """``Secret``: a zero-dependency container for in-process secret material.
 
 Masks its value in ``repr`` / ``str`` / tracebacks, requires an explicit

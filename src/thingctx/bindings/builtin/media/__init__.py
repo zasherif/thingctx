@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Media binding: the continuous-binary (audio/video) plane.
 
 Heavier than the single-file bindings, so it is a package: the binding

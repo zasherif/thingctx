@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """LocalBinding: drive an in-process callable (or object) as a transport."""
 
 from __future__ import annotations

@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """The auth layer is extensible: a user can register a provider to teach
 thingctx a brand-new scheme, or override how a built-in scheme is handled.
 

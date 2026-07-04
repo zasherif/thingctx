@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Round-trip test for the media publish path: encode synthetic frames to a
 file with the real PyAV backend, then decode them back. Skipped without the
 ``av``/``numpy`` codecs installed."""

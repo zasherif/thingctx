@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """13, extending thingctx: one programming model for every part you can extend.
 
 thingctx has four parts you can extend, and they all work the same way, so what

@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """03, thingctx + an LLM: the same pump as 02, now driven by a model.
 
 02 called the surface by hand (invoke / read_property / subscribe ...).

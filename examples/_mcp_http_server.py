@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """A real streamable-HTTP MCP server for the pump, reusing 01's build_server.
 
 Unlike stdio (spawned by the client per session), an HTTP MCP server is a

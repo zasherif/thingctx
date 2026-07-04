@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """The context a provider needs to resolve one owner's credential.
 
 Transport-neutral on purpose: no headers, no request object, nothing that ties

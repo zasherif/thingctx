@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 # gitleaks configuration. Extends the built-in ruleset and adds a narrow
 # allowlist for deterministic, non-secret test vectors so legitimate fixtures
 # do not block commits.

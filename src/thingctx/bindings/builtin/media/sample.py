@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Sample a few frames from a media stream.
 
 Image-only models (and MCP, which has no video content type) can't take a clip

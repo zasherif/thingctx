@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """The provider registry: an ordered set of providers, first match wins."""
 
 from __future__ import annotations

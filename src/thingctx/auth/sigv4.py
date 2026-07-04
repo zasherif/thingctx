@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """AWS Signature Version 4: a pure signing primitive plus credential helpers.
 
 ``sigv4_sign`` does no I/O and is exposed as ``thingctx.sigv4_sign``. Signing is

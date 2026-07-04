@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Drive a node-wot Thing with thingctx, using only the TD that node-wot (the
 W3C WoT reference implementation) serves.
 

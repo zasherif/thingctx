@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Measure 01 (MCP) vs 02 (thingctx) on the SAME pump, for the README.
 
 Three numbers, both paths driving the identical device:

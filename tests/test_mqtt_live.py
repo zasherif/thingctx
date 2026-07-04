@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Live MQTT Tier 1 proof against a real Mosquitto broker.
 
 Hermetic and credible: the test launches its *own* Mosquitto on an ephemeral

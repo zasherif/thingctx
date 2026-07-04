@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """OAuth2 JWT-bearer assertion grant (RFC 7523) against a real local server.
 
 This is how Google Cloud service accounts authenticate: the client signs a JWT

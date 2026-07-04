@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Parse a WoT Thing Description (JSON) into actions, properties, events,
 and their transport bindings. Stdlib only.
 """

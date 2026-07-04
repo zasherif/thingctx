@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Quickstart hardening: the documented consume-then-invoke path routes
 without manual binding wiring, and TD fetches send a real User-Agent (some
 hosts, e.g. Cloudflare, reject the default urllib UA with HTTP 403)."""

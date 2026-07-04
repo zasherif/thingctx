@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Protocol bindings: thingctx's transport extension point.
 
 A binding speaks one transport scheme and answers the runtime through the

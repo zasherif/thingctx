@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Offline tests for the media stream binding: the consume bridge, error
 propagation, and backend selection. No network or media codecs."""
 

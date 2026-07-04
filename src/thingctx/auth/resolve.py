@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """The shared resolution primitive: turn an owner's active schemes + secrets into
 neutral credential material, transport-agnostically.
 

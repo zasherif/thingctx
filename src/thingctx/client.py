@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """Consume a TD and return a ready LLMHost.
 
     host = await thingctx.from_url("http://device.local/.well-known/wot")

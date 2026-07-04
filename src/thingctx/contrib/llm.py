@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """LLMHost: a tool-calling loop over a ThingClient. litellm is imported
 lazily here only, so the pure ThingClient has no LLM dependency.
 

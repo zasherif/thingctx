@@ -1,3 +1,5 @@
+# Copyright 2026 The thingctx Authors
+# SPDX-License-Identifier: Apache-2.0
 """MQTT applier: map neutral credential material onto an MQTT connection.
 
 MQTT authenticates at the connection (CONNECT packet / TLS), not per message, so
