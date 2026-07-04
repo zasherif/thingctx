@@ -171,7 +171,7 @@ def _type_ok(schema: dict[str, Any], value: Any) -> tuple[bool, str]:
     """Lenient type check: only fails on a clear scalar-type mismatch."""
     # Binary/media payloads (e.g. an image property) are not JSON-typed; a
     # successful read is the signal, so never flag bytes as a type mismatch.
-    if isinstance(value, (bytes, bytearray)):
+    if isinstance(value, bytes | bytearray):
         return True, ""
     declared = schema.get("type") if isinstance(schema, dict) else None
     if not declared or declared not in _JSON_TYPES:
