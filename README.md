@@ -118,6 +118,15 @@ the LLM host, or an MCP client (Claude/Copilot CLI; see
 Runnable: [`examples/04_trust.py`](examples/04_trust.py). Full model:
 [`docs/TRUST.md`](docs/TRUST.md).
 
+**Trusting the description itself.** A TD carries no secrets, so it is safe to
+commit and share, and thingctx fetches only over `http(s)` and validates a TD
+against the W3C TD 1.1 schema before using it (install `thingctx[validate]`). But
+a description you fetch is code your agent acts on, so treat its source the way you
+treat any dependency: prefer a TD you wrote or a directory you control over an
+arbitrary URL. Content pinning and signature verification (so a fetched TD must
+match a known digest or a trusted signer) are a design in progress, not yet shipped;
+until then, the trust boundary is the source you point thingctx at.
+
 ## Reach a closed agent: the MCP bridge
 
 Some agents are closed: you can't hand their model tools directly, only
@@ -162,9 +171,10 @@ and it can change without touching a Thing Description.
 
 To expose a system over MCP you write a server, deploy it, and keep it running,
 one per integration. N systems means N processes to operate. A Thing Description
-is a static file: write it (or generate it), check it into git, or serve it from
-a URL. There is nothing to run, nothing to keep alive. Integration becomes data,
-not a service, and data scales to a fleet for free.
+is a static file: write it, or generate one from an existing spec
+(`thingctx import openapi <spec>` compiles an OpenAPI file or URL into a TD), then
+check it into git or serve it from a URL. There is nothing to run, nothing to keep
+alive. Integration becomes data, not a service, and data scales to a fleet for free.
 
 A messy device (binary protocol, a session dance) gets one thin connector that
 exposes a clean WoT face; the TD describes *that*. The connector is consumed
