@@ -150,13 +150,15 @@ Pick the policy with `THINGCTX_APPROVE_WHEN` (`declared` default, or
 MCP is just one way to deliver the description, for agents where direct tool
 calling isn't available.
 
-## Why not MCP
+## Where MCP fits
 
-MCP solves the wrong problem. Calling a real system from a model was always a
-tooling limitation, not a protocol one: read an interface, hand the model tool
-specs, route each call to its transport , all client-side, drivable from a plain
-description. MCP turns that gap into infrastructure you operate instead of data
-you read.
+MCP is a way to deliver tools to an agent you cannot hand them to directly. It is
+a delivery channel, not the integration itself. The integration, what a system
+does, how to reach it, who may call it, is the description. thingctx reads that
+description and drives the system client-side; when an agent is closed and only
+takes tools through MCP, the same description is delivered over the bridge (see
+above). The document is the durable part; the channel is the agent vendor's choice,
+and it can change without touching a Thing Description.
 
 To expose a system over MCP you write a server, deploy it, and keep it running,
 one per integration. N systems means N processes to operate. A Thing Description
@@ -168,13 +170,17 @@ A messy device (binary protocol, a session dance) gets one thin connector that
 exposes a clean WoT face; the TD describes *that*. The connector is consumed
 the same way by an LLM, an MCP client, or anything else.
 
+The table below measures one axis: what you build and operate per integration, not
+what each approach can do. thingctx wins on operational weight and cold-start; it
+says nothing about auth depth, policy, or ecosystem, which are their own questions.
+
 See [`examples/01_mcp_baseline.py`](examples/01_mcp_baseline.py) (a server per
 integration) and
 [`examples/02_thingctx_baseline.py`](examples/02_thingctx_baseline.py) (no
 server). Both drive the same pump; every result is asserted equal to calling
-the system directly. The difference is what you build and run to get there:
+the system directly.
 
-| per integration     | MCP (stdio) | MCP (http)   | thingctx |
+| per integration      | MCP (stdio) | MCP (http)   | thingctx |
 | -------------------- | ----------- | ------------ | -------- |
 | server process       | per session | 1, long-run  | 0        |
 | hand-written lines   | 142         | 142          | 10       |
